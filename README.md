@@ -1,9 +1,11 @@
 # Bilibili Study Room Live (自习室直播插件)
 
 一个基于 Bilibili 直播开放平台的互动自习室插件。观众通过发送弹幕参与打卡、专注于学习，直播间实时展示学习进度、排行榜及 AI 生成的个性化报告。
+
 # 预览
 
-![img](DEMO.png)
+![img](DEMO2.png)
+
 ## ✨ 主要功能
 
 ### 1. 互动打卡 (Study Timer)
