@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>自习室直播 - 专注时刻</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pangolin&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+
+        /* 1. 基础布局 */
+        body {
+            background-color: transparent;
+            /* OBS 透明背景 */
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 2. 缩放容器 */
+        #scaler-container {
+            width: 900px;
+            height: 550px;
+            display: flex;
+            flex-direction: column;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            /* Changed from center to flex-start */
+            padding-top: 60px;
+            /* Add top padding */
+            align-items: center;
+            transform-origin: center center;
+            position: relative;
+            /* For Checkmark positioning */
+        }
+
+        /* 3. 动画包装器 */
+        #content-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            /* 默认隐藏，等待数据 */
+            filter: blur(0px);
+            transition: opacity 0.5s ease;
+        }
+
+        #content-wrapper.active {
+            opacity: 1;
+        }
+
+        /* 擦除动画 */
+        @keyframes erase-effect {
+            0% {
+                -webkit-mask-position: 100% 0;
+                mask-position: 100% 0;
+                filter: blur(0px);
+                opacity: 1;
+            }
+
+            50% {
+                filter: blur(4px);
+            }
+
+            100% {
+                -webkit-mask-position: 0% 0;
+                mask-position: 0% 0;
+                filter: blur(8px);
+                opacity: 0;
+            }
+        }
+
+        /* 重写动画 */
+        @keyframes rewrite-effect {
+            0% {
+                opacity: 0;
+                filter: blur(10px);
+                transform: scale(0.98);
+            }
+
+            100% {
+                opacity: 1;
+                filter: blur(0px);
+                transform: scale(1);
+            }
+        }
+
+        .state-erasing {
+            -webkit-mask-image: linear-gradient(to right, transparent 50%, black 55%);
+            mask-image: linear-gradient(to right, transparent 50%, black 55%);
+            -webkit-mask-size: 250% 100%;
+            mask-size: 250% 100%;
+            animation: erase-effect 1.2s forwards cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .state-writing {
+            animation: rewrite-effect 0.8s forwards ease-out;
+        }
+
+        /* --- 粉笔风格样式 --- */
+        .chalk-style {
+            font-family: 'Pangolin', 'ZCOOL KuaiLe', "Comic Sans MS", "Chalkboard SE", "YouYuan", "幼圆", sans-serif;
+            color: #ffffee;
+            filter: url(#chalk-filter);
+            line-height: 1.3;
+            text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+        }
+
+        .chalk-header-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .chalk-text-item {
+            font-size: 60px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .chalk-progress-bar {
+            width: 90%;
+            height: 24px;
+            border: 4px solid #ffffee;
+            border-radius: 12px;
+            padding: 3px;
+            box-sizing: border-box;
+            filter: url(#chalk-filter);
+            position: relative;
+        }
+
+        .chalk-progress-fill {
+            height: 100%;
+            background-color: #ffffee;
+            border-radius: 8px;
+            width: var(--progress-percent, 0%);
+            transition: width 1s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* Finish State: Green Progress Bar */
+        .chalk-progress-fill.finished {
+            background-color: #72fb99;
+            /* Light Green */
+            transition: background-color 0.5s ease;
+        }
+
+        .chalk-footer-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+
+        .chalk-data-text {
+            font-size: 32px;
+            font-weight: normal;
+        }
+
+        .empty-state {
+            font-size: 40px;
+            opacity: 0.8;
+        }
+
+        /* --- Checkmark Animation --- */
+        #checkmark-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: flex-end;
+            /* Align right */
+            align-items: flex-end;
+            /* Align bottom */
+            padding-right: 80px;
+            /* Offset from right edge */
+            padding-bottom: 50px;
+            /* Offset from bottom edge */
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 10;
+        }
+
+        #checkmark-overlay.visible {
+            opacity: 1;
+        }
+
+        .checkmark-svg {
+            width: 180px;
+            /* Smaller size */
+            height: 180px;
+            transform: rotate(-15deg);
+            /* Natural angle */
+            filter: drop-shadow(0px 0px 5px rgba(255, 100, 100, 0.8));
+        }
+
+        .checkmark-path {
+            fill: none;
+            stroke: #ff4444;
+            /* Chalk Red */
+            stroke-width: 15;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            /* filter: url(#chalk-filter); Use chalk filter on stroke too? Maybe too heavy */
+        }
+
+        .animate-checkmark {
+            animation: draw-check 1.5s ease-out forwards;
+        }
+
+        @keyframes draw-check {
+            0% {
+                stroke-dashoffset: 1000;
+            }
+
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .svg-hidden {
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+        }
+
+        /* --- Empty State / Sleeping Cat --- */
+        #empty-state-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            /* Slightly higher for visual balance */
+            display: none;
+            /* Initially hidden */
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+
+        #empty-state-wrapper.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* Animations from reference, adapted for Chalk */
+        @keyframes breathe {
+
+            0%,
+            100% {
+                transform: scale(1) translateY(0);
+            }
+
+            50% {
+                transform: scale(1.02) translateY(-2px);
+            }
+        }
+
+        @keyframes tail-twitch {
+
+            0%,
+            90%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            92% {
+                transform: rotate(5deg);
+            }
+
+            94% {
+                transform: rotate(-5deg);
+            }
+
+            96% {
+                transform: rotate(3deg);
+            }
+        }
+
+        @keyframes float-z {
+            0% {
+                transform: translate(0, 0) scale(0.5);
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+                transform: translate(10px, -20px) scale(1);
+            }
+
+            80% {
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translate(25px, -60px) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        .cat-svg-container {
+            width: 400px;
+            height: 400px;
+            filter: url(#chalk-filter);
+            /* Apply Chalk Filter */
+        }
+
+        .cat-path {
+            fill: none;
+            stroke: #ffffee;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .cat-body-group {
+            transform-origin: center bottom;
+            animation: breathe 5s ease-in-out infinite;
+        }
+
+        .cat-tail {
+            transform-origin: 20px 130px;
+            animation: tail-twitch 10s ease-in-out infinite;
+        }
+
+        .zzz {
+            font-family: 'Pangolin', "Comic Sans MS", "Chalkboard SE", sans-serif;
+            fill: #ffffee;
+            font-weight: bold;
+            opacity: 0;
+        }
+
+        .zzz-1 {
+            animation: float-z 4s ease-out infinite 0s;
+        }
+
+        .zzz-2 {
+            animation: float-z 4s ease-out infinite 1.3s;
+        }
+
+        .zzz-3 {
+            animation: float-z 4s ease-out infinite 1s;
+        }
+
+        .empty-text {
+            font-family: 'Pangolin', 'ZCOOL KuaiLe', "Comic Sans MS", "Chalkboard SE", "YouYuan", "幼圆", sans-serif;
+            color: #ffffee;
+            font-size: 48px;
+            margin-top: 20px;
+            filter: url(#chalk-filter);
+            text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="scaler-container">
+        <!-- 正常内容显示区 -->
+        <div id="content-wrapper">
+            <div class="chalk-header-group chalk-style">
+                <span class="chalk-text-item" id="user-name">Loading...</span>
+                <span class="chalk-text-item">正在专注</span>
+                <span class="chalk-text-item" id="project-name">...</span>
+            </div>
+
+            <div class="chalk-progress-bar">
+                <div class="chalk-progress-fill"></div>
+            </div>
+
+            <div class="chalk-footer-group chalk-style">
+                <span class="chalk-data-text" id="current-time-info">进度: 0/0</span>
+                <span class="chalk-data-text">|</span>
+                <span class="chalk-data-text" id="daily-total-info">当日: 0m</span>
+            </div>
+        </div>
+
+        <!-- 空闲状态：睡觉猫咪 -->
+        <div id="empty-state-wrapper">
+            <div class="empty-text">大家都在休息呢...</div>
+            <div class="cat-svg-container">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+                    <defs>
+                        <!-- Mask to hide body lines behind head -->
+                        <mask id="head-mask">
+                            <rect width="100%" height="100%" fill="white" />
+                            <!-- Head Shapes filled with Black to Hide -->
+                            <g transform="translate(120, 115)">
+                                <circle cx="0" cy="0" r="32" fill="black" />
+                                <path d="M -25 -15 L -35 -40 L -5 -25 Z" fill="black" />
+                                <path d="M 25 -15 L 35 -40 L 5 -25 Z" fill="black" />
+                            </g>
+                        </mask>
+                    </defs>
+
+                    <!-- Body Group with Breathing and Masking -->
+                    <g class="cat-body-group" mask="url(#head-mask)">
+                        <!-- Tail -->
+                        <path d="M 40 140 Q 10 140 15 110 Q 20 80 50 100" class="cat-path cat-tail" />
+                        <!-- Body -->
+                        <path d="M 50 140 C 30 140, 30 90, 80 90 C 120 90, 150 110, 150 140 C 150 170, 70 170, 50 140"
+                            class="cat-path" />
+                        <!-- Front Paw -->
+                        <!-- 前爪 (搭在前面) -->
+                        <ellipse cx="90" cy="145" rx="12" ry="8" class="cat-path" />
+                        <path d="M 85 145 L 95 145" class="cat-path" />
+                    </g>
+
+                    <!-- Head Group (No Mask)-->
+                    <g transform="translate(120, 115)">
+                        <!-- Ears -->
+                        <path d="M -25 -15 L -35 -40 L -5 -25 Z" class="cat-path" />
+                        <path d="M 25 -15 L 35 -40 L 5 -25 Z" class="cat-path" />
+                        <path d="M -25 -15 L -32 -32 L -10 -22 Z" class="cat-path" /> <!-- 内耳 -->
+                        <path d="M 25 -15 L 32 -32 L 10 -22 Z" class="cat-path" />
+
+                        <!-- Face Outline (Partial circle to leave room for ears if needed, but simple circle is fine for chalk)-->
+                        <circle cx="0" cy="0" r="32" class="cat-path" />
+
+                        <!-- Eyes (Closed Curves)-->
+                        <path d="M -18 -2 Q -12 -8 -6 -2" class="cat-path" stroke-width="2.5" />
+                        <path d="M 6 -2 Q 12 -8 18 -2" class="cat-path" stroke-width="2.5" />
+
+                        <!-- Nose -->
+                        <path d="M -3 6 L 3 6 L 0 9 Z" class="cat-path" fill="none" />
+
+                        <!-- Mouth -->
+                        <path d="M -3 9 Q -5 12 0 12 Q 5 12 3 9" class="cat-path" />
+
+                        <!-- Whiskers -->
+                        <g stroke="#ffffee" stroke-width="1" opacity="0.7">
+                            <line x1="-20" y1="5" x2="-35" y2="2" />
+                            <line x1="-20" y1="10" x2="-36" y2="10" />
+                            <line x1="20" y1="5" x2="35" y2="2" />
+                            <line x1="20" y1="10" x2="36" y2="10" />
+                        </g>
+
+
+                    </g>
+
+                    <!-- Zzz Group -->
+                    <g transform="translate(120, 100)">
+                        <text x="0" y="0" font-size="28" class="zzz zzz-1">Z</text>
+                        <text x="0" y="-15" font-size="22" class="zzz zzz-2">Z</text>
+                        <text x="0" y="-30" font-size="18" class="zzz zzz-3">z</text>
+                    </g>
+                </svg>
+            </div>
+
+        </div>
+
+        <!-- 红色对勾叠加层 -->
+        <div id="checkmark-overlay">
+            <svg class="checkmark-svg" viewBox="0 0 200 200">
+                <path class="checkmark-path" d="M40 100 L80 140 L160 60" />
+            </svg>
+        </div>
+
+        <!-- 常驻底部提示 -->
+        <div id="hint-footer" class="chalk-style"
+            style="position: absolute; bottom: 10px; font-size: 48px; opacity: 0.8; width: 100%; text-align: center;">
+            弹幕发送 "打卡 项目 分钟数" 开始专注 <br> "AI报告" 获取评价 | "专注统计" 查询数据
+        </div>
+    </div>
+
+    <!-- SVG 滤镜定义 -->
+    <svg class="svg-hidden">
+        <defs>
+            <filter id="chalk-filter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"
+                    result="displacedText" />
+                <feComposite in="displacedText" in2="noise" operator="arithmetic" k1="0" k2="1.0" k3="-0.5" k4="0.2"
+                    result="grainyText" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="glow" />
+                <feMerge>
+                    <feMergeNode in="glow" />
+                    <feMergeNode in="grainyText" />
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+    <script>
+        // --- 核心状态 ---
+        let userList = [];
+        let currentIndex = 0;
+        let ws = null;
+        let reconnectTimer = null;
+        // Duplicate removed
+        let carouselTimer = null;
+        let carouselInterval = 15000; // Default
+
+        // 锁定状态：当有人完成时，锁定轮播，展示动画
+        let isLocked = false;
+
+        // --- DOM 元素 ---
+        const containerWrapper = document.getElementById('content-wrapper');
+        const emptyWrapper = document.getElementById('empty-state-wrapper');
+        const containerDiv = document.getElementById('scaler-container');
+        const elUser = document.getElementById('user-name');
+        const elProject = document.getElementById('project-name');
+        const elCurrentInfo = document.getElementById('current-time-info');
+        const elDailyInfo = document.getElementById('daily-total-info');
+        const fillBar = document.querySelector('.chalk-progress-fill');
+
+        const checkOverlay = document.getElementById('checkmark-overlay');
+        const checkPath = document.querySelector('.checkmark-path');
+
+        // --- WebSocket 连接 ---
+        function connect() {
+            ws = new WebSocket('ws://localhost:23335');
+
+            ws.onopen = () => {
+                console.log('Connected to local server');
+                if (reconnectTimer) clearInterval(reconnectTimer);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'STATE_UPDATE') {
+                        // 如果处于锁定状态（正在播完成动画），暂不更新列表显示，只更新数据
+                        // 但如果列表空了，还是要更新的
+                        handleStateUpdate(msg.data.list);
+                    } else if (msg.type === 'SESSION_COMPLETE') {
+                        // 收到完成事件，触发高光时刻
+                        playFinishAnimation(msg.data);
+                    }
+                } catch (e) {
+                    console.error('Parse error:', e);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('Disconnected, retrying in 3s...');
+                reconnectTimer = setTimeout(connect, 3000);
+            };
+        }
+
+        function handleStateUpdate(newList) {
+            const wasEmpty = userList.length === 0;
+            userList = newList;
+            const isEmpty = userList.length === 0;
+
+            if (isEmpty) {
+                // 如果空了，隐藏内容，显示空状态
+                containerWrapper.style.display = 'none';
+                containerWrapper.classList.remove('active');
+
+                // 只有当没有显示过空状态时才 fade-in，避免闪烁
+                if (!emptyWrapper.classList.contains('visible')) {
+                    emptyWrapper.style.display = 'flex';
+                    // Small delay to allow display flex to apply before opacity transition
+                    requestAnimationFrame(() => {
+                        emptyWrapper.classList.add('visible');
+                    });
+                }
+                return;
+            } else {
+                // 有人了，隐藏空状态
+                if (emptyWrapper.classList.contains('visible')) {
+                    emptyWrapper.classList.remove('visible');
+                    setTimeout(() => {
+                        emptyWrapper.style.display = 'none';
+                    }, 500); // Wait for fade out
+                }
+
+                containerWrapper.style.display = 'flex';
+            }
+
+            // 如果锁定中，不切人，只更新当前人的数据（如果还在列表里）
+            if (isLocked) return;
+
+            // 如果之前是空的，或者刚初始化，立刻渲染
+            if (wasEmpty) {
+                currentIndex = 0;
+                renderCurrentUser(false);
+                containerWrapper.classList.add('active');
+            }
+        }
+
+        // --- 渲染逻辑 ---
+        function renderCurrentUser(animate = true) {
+            if (userList.length === 0) return;
+
+            if (currentIndex >= userList.length) currentIndex = 0;
+            const data = userList[currentIndex];
+
+            // 格式化时间
+            const currentMins = Math.floor(data.duration / 60);
+            const targetMins = Math.floor(data.targetDuration / 60);
+            const dailyMins = Math.floor(data.todayTotal / 60);
+
+            // 1. 切换动画
+            if (animate) {
+                containerWrapper.classList.remove("state-writing");
+                containerWrapper.classList.add("state-erasing");
+
+                setTimeout(() => {
+                    updateTextContent(data.username, data.project, currentMins, targetMins, dailyMins);
+
+                    // Reset Bar
+                    fillBar.style.transition = 'none';
+                    fillBar.classList.remove('finished'); // Reset color
+                    containerDiv.style.setProperty('--progress-percent', '0%');
+                    void fillBar.offsetWidth; // Force Reflow
+
+                    containerWrapper.classList.remove("state-erasing");
+                    containerWrapper.classList.add("state-writing");
+
+                    // Grow Bar
+                    setTimeout(() => {
+                        fillBar.style.transition = 'width 1s cubic-bezier(0.25, 1, 0.5, 1)';
+                        updateProgressBar(data.duration, data.targetDuration);
+                    }, 100);
+
+                }, 1200);
+            }
+            // 2. 仅更新数据
+            else {
+                updateTextContent(data.username, data.project, currentMins, targetMins, dailyMins);
+                updateProgressBar(data.duration, data.targetDuration);
+            }
+        }
+
+        function updateTextContent(user, project, current, target, daily) {
+            elUser.textContent = user;
+            elProject.textContent = project;
+            elCurrentInfo.textContent = `进度: ${current} / ${target}分`;
+            elDailyInfo.textContent = `当日: ${daily}分钟`;
+        }
+
+        function updateProgressBar(currentSec, targetSec) {
+            let percent = (currentSec / targetSec) * 100;
+            if (percent > 100) percent = 100;
+            containerDiv.style.setProperty('--progress-percent', percent + '%');
+        }
+
+        // --- 高光时刻动画 ---
+        function playFinishAnimation(finishedUser) {
+            // 1. 找到该用户在列表中的位置
+            const idx = userList.findIndex(u => u.username === finishedUser.username);
+            if (idx !== -1) {
+                currentIndex = idx; // 强行切到这个用户
+            }
+
+            console.log("播放完成动画:", finishedUser.username);
+            isLocked = true; // 锁定轮播
+
+            // 立即渲染该用户（带切换动画，确保画面是他）
+            renderCurrentUser(true);
+
+            // 等切换动画做完 (约1.5s)，开始打勾
+            setTimeout(() => {
+                // 进度条变绿
+                fillBar.classList.add('finished');
+                containerDiv.style.setProperty('--progress-percent', '100%');
+
+                // 显示对勾
+                checkOverlay.classList.add('visible');
+                checkPath.classList.add('animate-checkmark');
+
+                // 20秒后解锁
+                setTimeout(() => {
+                    isLocked = false;
+                    checkOverlay.classList.remove('visible');
+                    checkPath.classList.remove('animate-checkmark');
+                    fillBar.classList.remove('finished');
+
+                    // 此时后端应该已经把他踢了，前端下一次轮播或更新会自动切走
+                    nextUser();
+
+                }, 20000); // 20s展示期
+
+            }, 1500);
+        }
+
+        // --- 轮播控制 ---
+        function nextUser() {
+            if (isLocked) return; // 锁定中不轮播
+            if (userList.length <= 1) return;
+
+            currentIndex = (currentIndex + 1) % userList.length;
+            renderCurrentUser(true);
+        }
+
+        // --- 定时器 ---
+        // 实时计时 (每秒微调UI)
+        setInterval(() => {
+            if (userList.length === 0 || isLocked) return;
+            renderCurrentUser(false); // 仅刷新数字
+        }, 1000);
+
+        // 轮播控制 (Dynamic Interval)
+        async function startCarousel() {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                if (data.displayDuration && data.displayDuration.index) {
+                    carouselInterval = data.displayDuration.index;
+                }
+            } catch (e) {
+                console.warn("Config Load Error", e);
+            }
+
+            console.log(`[Index] Carousel Interval: ${carouselInterval}ms`);
+
+            setInterval(() => {
+                if (userList.length > 1) {
+                    nextUser();
+                }
+            }, carouselInterval);
+        }
+
+        // --- 自动缩放 ---
+        function autoScale() {
+            const container = document.getElementById('scaler-container');
+            const scale = Math.min(window.innerWidth / 900, window.innerHeight / 550) * 0.95;
+            container.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('load', () => {
+            autoScale();
+            connect();
+            startCarousel();
+        });
+        window.addEventListener('resize', autoScale);
+
+    </script>
+</body>
+
+</html>

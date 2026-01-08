@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>终端记录 - SYSTEM LOG</title>
+    <!-- 引入复古终端字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            /* OBS 透明背景 */
+            background-color: transparent;
+            color: #33ff33;
+            /* 终端绿 */
+            font-family: 'VT323', 'Consolas', monospace;
+            padding: 20px;
+            box-sizing: border-box;
+            text-shadow: 0 0 5px rgba(51, 255, 51, 0.7);
+            /* 荧光效果 */
+        }
+
+        /* CRT 扫描线效果 */
+        .scanline {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom,
+                    rgba(255, 255, 255, 0),
+                    rgba(255, 255, 255, 0) 50%,
+                    rgba(0, 0, 0, 0.2) 50%,
+                    rgba(0, 0, 0, 0.2));
+            background-size: 100% 40px;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.6;
+        }
+
+        /* 屏幕闪烁微动 */
+        @keyframes flicker {
+            0% {
+                opacity: 0.97;
+            }
+
+            5% {
+                opacity: 0.95;
+            }
+
+            10% {
+                opacity: 0.9;
+            }
+
+            15% {
+                opacity: 0.95;
+            }
+
+            100% {
+                opacity: 0.97;
+            }
+        }
+
+        .crt-flicker {
+            animation: flicker 0.15s infinite;
+        }
+
+        #terminal-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+
+            /* === 3D 透视调整区 (已经人工手动调整过,请勿修改) === */
+            transform-origin: center center;
+            transform:
+                perspective(2000px)
+                /* 透视深度: 越小透视越夸张 */
+                rotateX(15deg)
+                /* 上下翻转: 负值向上仰，正值向下俯 */
+                rotateY(30deg)
+                /* 左右翻转: 负值向左转，正值向右转 */
+                rotateZ(-8deg)
+                /* 平面旋转 */
+                scale(0.60);
+            /* 整体缩放: 避免贴边 */
+        }
+
+        header {
+            border-bottom: 2px solid #33ff33;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            font-size: 150px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 48px;
+            height: 200px;
+            background-color: #33ff33;
+            animation: blink 1s step-end infinite;
+            vertical-align: sub;
+            margin-left: 10px;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex: 1;
+            overflow: hidden;
+            /* 隐藏溢出 */
+        }
+
+        li.log-entry {
+            font-size: 150px;
+            line-height: 1.2;
+            /* Tighten line height for wrapped text */
+            margin-bottom: 8px;
+            /* Increase spacing between entries */
+            opacity: 0;
+            animation: type-in 0.3s forwards ease-out;
+            white-space: normal;
+            /* Allow wrapping */
+            word-break: break-word;
+            /* Break long words properly */
+        }
+
+        /* 模拟打字机/数据流输入效果 */
+        @keyframes type-in {
+            0% {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .timestamp {
+            color: #20c20e;
+            /* 稍暗一点的绿 */
+            margin-right: 20px;
+        }
+
+        .user-tag {
+            color: #ccffcc;
+            /* 亮白绿 */
+            font-weight: bold;
+        }
+
+        .project-tag {
+            color: #ffff00;
+            /* 黄色高亮项目 */
+        }
+
+        .highlight-update {
+            animation: flash-row 1s ease-out;
+        }
+
+        @keyframes flash-row {
+            0% {
+                background-color: rgba(51, 255, 51, 0.4);
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+    </style>
+</head>
+
+<body class="crt-flicker">
+    <div class="scanline"></div>
+
+    <div id="terminal-container">
+        <header>
+            <span>>> Finshed Record <span class="cursor"></span></span>
+            <span style="font-size: 150px;">STATUS: ONLINE</span>
+        </header>
+
+        <ul id="log-list">
+            <!-- JS 插入日志 -->
+        </ul>
+    </div>
+
+    <script>
+        const listEl = document.getElementById('log-list');
+        let ws = null;
+        let reconnectTimer = null;
+
+        // --- WebSocket 连接 ---
+        function connect() {
+            ws = new WebSocket('ws://localhost:23335');
+
+            ws.onopen = () => {
+                console.log('Terminal connected');
+                addSystemLog('CONNECTED');
+                if (reconnectTimer) clearInterval(reconnectTimer);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'SESSION_COMPLETE') {
+                        addRecord(msg.data);
+                    }
+                } catch (e) {
+                    console.error('Parse error:', e);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('Disconnected');
+                addSystemLog('CONNECTION LOST. RETRYING...');
+                reconnectTimer = setTimeout(connect, 3000);
+            };
+        }
+
+        function addSystemLog(text) {
+            const li = document.createElement('li');
+            li.className = 'log-entry';
+            li.style.color = '#777'; // 灰色系统消息
+            li.innerText = `[SYS] ${text}`;
+            listEl.insertBefore(li, listEl.firstChild);
+        }
+
+        function addRecord(data) {
+            const durationMins = Math.floor(data.duration / 60);
+
+            // Unique ID for merging
+            const itemId = `log-${data.uid}-${data.project}`;
+            let existingLi = document.getElementById(itemId);
+
+            if (existingLi) {
+                // Update & Move to top
+                listEl.removeChild(existingLi);
+                listEl.insertBefore(existingLi, listEl.firstChild);
+
+                updateLogContent(existingLi, data, durationMins);
+
+                // Flash animation
+                existingLi.classList.remove('highlight-update');
+                void existingLi.offsetWidth;
+                existingLi.classList.add('highlight-update');
+            } else {
+                // New Entry
+                const li = document.createElement('li');
+                li.id = itemId;
+                li.className = 'log-entry highlight-update'; // Flash on create too
+
+                updateLogContent(li, data, durationMins);
+
+                if (listEl.firstChild) {
+                    listEl.insertBefore(li, listEl.firstChild);
+                } else {
+                    listEl.appendChild(li);
+                }
+            }
+
+            // Limit lines
+            while (listEl.children.length > 12) {
+                listEl.removeChild(listEl.lastChild);
+            }
+        }
+
+        function updateLogContent(li, data, durationMins) {
+            const now = new Date();
+            const timeStr = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}]`;
+
+            li.innerHTML = `
+                <span class="timestamp">${timeStr}</span>
+                <span class="user-tag">USER_${data.username}</span>
+                <span>:: COMPLETED TASK</span>
+                <span class="project-tag"><${data.project}></span>
+                <span>(+${durationMins}m)</span>
+            `;
+        }
+
+        window.addEventListener('load', connect);
+
+    </script>
+</body>
+
+</html>

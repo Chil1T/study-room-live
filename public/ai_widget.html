@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Wingman Widget</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;900&display=swap');
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: transparent;
+            font-family: 'Share Tech Mono', monospace;
+            /* Anti-aliasing */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        .font-chakra {
+            /* Fallback to Noto Sans SC for Chinese characters */
+            font-family: 'Chakra Petch', 'Noto Sans SC', sans-serif;
+        }
+
+        /* Specifically for dates/mixed content where we want Noto's Black weight */
+        .font-tech-cn {
+            font-family: 'Noto Serif SC', 'Chakra Petch', 'Noto Sans SC', serif;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        /* Force Hardware Acceleration */
+        .force-gpu {
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body x-data="widgetApp()">
+
+    <!-- Main Container: Full Size, Centered -->
+    <div x-cloak class="w-full h-full p-6 box-border flex flex-col justify-center items-center">
+
+        <!-- Parallelogram Container -->
+        <!-- Fixed Height (h-80) to prevent layout jumping -->
+        <div
+            class="relative w-full max-w-sm h-80 transform -skew-x-[10deg] p-4 transition-all duration-300 force-gpu flex flex-col pointer-events-none">
+
+            <!-- Inner Content: Counter-skew -->
+            <div class="w-full h-full transform skew-x-[10deg] force-gpu flex flex-col pointer-events-auto">
+
+                <!-- Header: Fixed Top -->
+                <div
+                    class="flex-none flex justify-between items-center mb-2 opacity-90 border-b-4 border-gray-800 pb-2">
+                    <div class="flex items-center gap-2 text-gray-900">
+                        <div class="w-3 h-3 bg-green-600 rounded-sm animate-pulse"></div>
+                        <span class="text-xl font-black tracking-widest text-lg">AI_CORE</span>
+                    </div>
+                    <div class="text-xl font-black text-gray-600 tracking-wider">ONLINE</div>
+                </div>
+
+                <!-- Content Area: Flex-1 to Center Content Vertically -->
+                <div class="flex-1 relative flex flex-col justify-center overflow-hidden">
+
+                    <!-- Idle State -->
+                    <template x-if="!activeItem">
+                        <div
+                            class="absolute inset-0 flex flex-col items-center justify-center animate-fade-in space-y-1">
+                            <!-- Time -->
+                            <div class="text-[8rem] font-black text-gray-900 leading-none tracking-tighter force-gpu scale-y-110"
+                                style="text-shadow: 2px 2px 0px rgba(255,255,255,0.4)">
+                                <span x-text="timeStr"></span>
+                            </div>
+                            <!-- Date -->
+                            <div class="text-5xl font-black font-tech-cn text-gray-700 tracking-wide uppercase mt-4">
+                                <span x-text="dateStr"></span>
+                            </div>
+                            <!-- Hint -->
+                            <div class="mt-8">
+                                <div
+                                    class="text-2xl font-black text-indigo-800 uppercase tracking-widest animate-pulse bg-indigo-100/50 px-3 py-1 rounded">
+                                    > Awaiting Input_
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Active State -->
+                    <template x-if="activeItem">
+                        <div class="w-full animate-slide-in">
+                            <!-- TYPE: STATS -->
+                            <template x-if="activeItem.type === 'WIDGET_STATS'">
+                                <div class="space-y-2">
+                                    <div class="border-b-4 border-gray-900 pb-1 flex justify-between items-end">
+                                        <!-- Truncate username -->
+                                        <span
+                                            class="text-3xl font-bold font-chakra text-gray-900 leading-none truncate w-3/4"
+                                            x-text="activeItem.data.username"></span>
+                                        <span
+                                            class="text-xs font-black bg-gray-900 text-white px-2 py-1 transform skew-x-[-10deg]">STATS</span>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <!-- Duration -->
+                                        <div class="border-l-8 border-indigo-600 pl-3">
+                                            <div class="text-xs font-black text-gray-500 uppercase tracking-widest">
+                                                Duration</div>
+                                            <!-- Responsive/Adaptive Sizing -->
+                                            <div class="flex items-baseline mt-1 text-indigo-700">
+                                                <span class="text-4xl font-black leading-none tracking-tighter"
+                                                    x-text="formatDurationParts(activeItem.data.duration).value"></span>
+                                                <span class="text-xl font-black text-indigo-400 ml-1"
+                                                    x-text="formatDurationParts(activeItem.data.duration).unit"></span>
+                                            </div>
+                                        </div>
+                                        <!-- Sessions -->
+                                        <div class="border-l-8 border-gray-800 pl-3">
+                                            <div class="text-xs font-black text-gray-500 uppercase tracking-widest">
+                                                Sessions</div>
+                                            <div class="text-4xl font-black text-gray-900 leading-none mt-1 tracking-tighter"
+                                                x-text="activeItem.data.sessions"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right mt-4 border-t-2 border-gray-300 pt-2">
+                                        <span class="text-sm font-black text-gray-500">ACTIVE DAYS: <span
+                                                class="text-gray-900 text-2xl"
+                                                x-text="activeItem.data.active_days"></span></span>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- TYPE: AI REPORT -->
+                            <template x-if="activeItem.type === 'WIDGET_AI'">
+                                <div class="space-y-1">
+                                    <div
+                                        class="border-b-4 border-indigo-600 pb-1 flex justify-between items-center mb-0">
+                                        <span class="text-3xl font-bold font-chakra text-gray-900 truncate w-3/4"
+                                            x-text="activeItem.data.username"></span>
+                                        <span
+                                            class="text-xs font-black text-white bg-indigo-600 px-3 py-1 transform skew-x-[-10deg]">REPORT</span>
+                                    </div>
+                                    <!-- Floating text block -->
+                                    <div
+                                        class="text-2xl font-bold font-chakra text-gray-900 leading-tight min-h-[80px] pl-4 border-l-8 border-indigo-400 mt-0 pt-1">
+                                        <span class="text-indigo-600 font-black text-2xl mr-2">>></span>
+                                        <span x-text="displayText"></span><span
+                                            class="w-4 h-7 inline-block bg-indigo-600 align-middle ml-1 animate-pulse"
+                                            x-show="isTyping"></span>
+                                    </div>
+                                </div>
+                        </div>
+                    </template>
+
+                    <!-- TYPE: LOADING -->
+                    <template x-if="activeItem.type === 'WIDGET_AI_LOADING'">
+                        <div class="space-y-4 flex flex-col justify-center items-center h-40">
+                            <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600"></div>
+                            <div class="text-xl font-black text-gray-500 animate-pulse">THINKING...</div>
+                        </div>
+                    </template>
+                </div>
+                </template>
+
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Background Logic -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('widgetApp', () => ({
+                queue: [],
+                activeItem: null,
+                displayText: '',
+                isTyping: false,
+
+                // Clock state
+                timeStr: '00:00',
+                dateStr: 'YYYY-MM-DD',
+
+                // Config
+                displayDuration: 30000,
+
+                init() {
+                    this.loadConfig().then(() => {
+                        this.connectWS();
+                        this.startClock();
+                        // Process queue loop
+                        setInterval(() => {
+                            if (!this.activeItem && this.queue.length > 0) {
+                                this.showNext();
+                            }
+                        }, 1000);
+                    });
+                },
+
+                async loadConfig() {
+                    try {
+                        const res = await fetch('/api/config');
+                        const data = await res.json();
+                        if (data.displayDuration && data.displayDuration.widget) {
+                            this.displayDuration = data.displayDuration.widget;
+                        }
+                    } catch (e) {
+                        console.warn("Config Load Error", e);
+                    }
+                },
+
+                startClock() {
+                    const update = () => {
+                        const now = new Date();
+                        this.timeStr = now.getHours().toString().padStart(2, '0') + ':' +
+                            now.getMinutes().toString().padStart(2, '0');
+                        this.dateStr = now.toLocaleDateString('zh-CN', {
+                            month: '2-digit', day: '2-digit', weekday: 'short'
+                        }).replace(/\//g, '.');
+                    };
+                    update();
+                    setInterval(update, 1000);
+                },
+
+                connectWS() {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.hostname}:23335`;
+                    const ws = new WebSocket(wsUrl);
+
+                    ws.onmessage = (event) => {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'WIDGET_STATS' || msg.type === 'WIDGET_AI' || msg.type === 'WIDGET_AI_LOADING') {
+                            // If it's a loading event, push it. 
+                            // If it's the actual AI report, we should check if we are currently showing a loading state for this user 
+                            // and replace it, OR just push it to queue and let simple logic handle it.
+                            // Simple logic: Push everything. Loading will show. Then AI will show (replacing it naturally if we shift).
+
+                            // Better Logic: If receiving AI_RESULT, and queue has AI_LOADING for same user, replace it. 
+                            // OR if activeItem is AI_LOADING, replace activeItem immediately.
+
+                            if (msg.type === 'WIDGET_AI') {
+                                // Check active item
+                                if (this.activeItem && this.activeItem.type === 'WIDGET_AI_LOADING' && this.activeItem.data.username === msg.data.username) {
+                                    // Replace immediately
+                                    this.activeItem = msg;
+                                    this.typewriterEffect(msg.data.text);
+                                    return;
+                                }
+                                // Check queue
+                                const loadingIdx = this.queue.findIndex(q => q.type === 'WIDGET_AI_LOADING' && q.data.username === msg.data.username);
+                                if (loadingIdx !== -1) {
+                                    // Replace in queue
+                                    this.queue[loadingIdx] = msg;
+                                    return;
+                                }
+                            }
+
+                            this.queue.push(msg);
+                        }
+                    };
+
+                    ws.onclose = () => {
+                        setTimeout(() => this.connectWS(), 3000);
+                    };
+                },
+
+                showNext() {
+                    const item = this.queue.shift();
+                    this.activeItem = item;
+
+                    if (item.type === 'WIDGET_AI') {
+                        this.typewriterEffect(item.data.text);
+                    } else {
+                        // Stats just show up
+                        setTimeout(() => {
+                            this.activeItem = null;
+                        }, this.displayDuration);
+                    }
+                },
+
+                typewriterEffect(text) {
+                    this.displayText = '';
+                    this.isTyping = true;
+                    let i = 0;
+                    const speed = 50;
+
+                    const timer = setInterval(() => {
+                        // Clean text
+                        const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
+                        if (i >= cleanText.length) {
+                            clearInterval(timer);
+                            this.isTyping = false;
+                            setTimeout(() => {
+                                this.activeItem = null;
+                            }, this.displayDuration);
+                            return;
+                        }
+                        this.displayText += cleanText.charAt(i);
+                        i++;
+                    }, speed);
+                },
+
+                formatDurationParts(minutes) {
+                    if (minutes < 60) {
+                        return { value: minutes, unit: 'M' };
+                    }
+                    return { value: (minutes / 60).toFixed(1), unit: 'H' };
+                }
+            }))
+        });
+    </script>
+</body>
+
+</html>

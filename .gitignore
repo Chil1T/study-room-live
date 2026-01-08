@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment Variables (Sensitive Data - DO NOT COMMIT)
+.env
+
+# Database (Local data)
+daka.db
+daka.db-journal
+
+# Build Output
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Editor Directories
+.vscode/
+.idea/
+.DS_Store
