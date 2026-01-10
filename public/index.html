@@ -368,6 +368,91 @@
             text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
             text-align: center;
         }
+
+        /* --- Reading Cat (Middle Decoration) --- */
+        #reading-cat-container {
+            position: absolute;
+            bottom: 210px;
+            /* Positioned above the footer */
+            width: 100%;
+            height: 140px;
+            /* Fixed height for the gap */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+            opacity: 0.9;
+        }
+
+        .rc-svg {
+            height: 100%;
+            width: auto;
+            filter: url(#chalk-filter);
+        }
+
+        .rc-line {
+            fill: none;
+            stroke: #ffffee;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .rc-line-fill {
+            fill: none;
+            /* Chalk style usually outlines, but if needed, use transparency or hatching */
+            stroke: #ffffee;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+
+
+
+
+        .rc-flipping-page {
+            transform-origin: 400px 280px;
+            fill: none;
+            /* No white paper fill for chalk style */
+            stroke: #ffffee;
+            stroke-width: 3;
+            animation: rc-flipPage 2.5s cubic-bezier(0.645, 0.045, 0.355, 1) infinite;
+        }
+
+        .rc-p1 {
+            animation-delay: 0s;
+        }
+
+        .rc-p2 {
+            animation-delay: 0s;
+        }
+
+        .rc-p3 {
+            animation-delay: 0s;
+        }
+
+
+
+        @keyframes rc-flipPage {
+            0% {
+                transform: perspective(1000px) rotateY(0deg);
+                opacity: 1;
+            }
+
+            15% {
+                transform: perspective(1000px) rotateY(10deg);
+            }
+
+            85% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: perspective(1000px) rotateY(-180deg);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
@@ -391,6 +476,29 @@
                 <span class="chalk-data-text">|</span>
                 <span class="chalk-data-text" id="daily-total-info">当日: 0m</span>
             </div>
+        </div>
+
+        <!-- Reading Cat Decoration (Bottom Middle) -->
+        <div id="reading-cat-container">
+            <!-- Modified viewBox to center the book (Spine is at x=400, so 400 - 390/2 = 205) -->
+            <svg class="rc-svg" viewBox="205 170 390 185" preserveAspectRatio="xMidYMid meet"
+                xmlns="http://www.w3.org/2000/svg">
+
+                <g id="rc-book" transform="translate(0, 10)">
+                    <!-- Book Base -->
+                    <path class="rc-line-fill" d="M300,340 L500,340 L530,310 L330,310 Z" style="fill:none" />
+                    <path class="rc-line-fill" d="M300,335 L400,335 L400,220 L300,220 Z" />
+                    <path class="rc-line-fill" d="M500,335 L400,335 L400,220 L500,220 Z" />
+                    <!-- Spine -->
+                    <line x1="400" y1="220" x2="400" y2="340" class="rc-line" stroke-width="4" />
+                    <!-- Flipping Pages -->
+                    <g id="rc-flipping-pages">
+                        <path class="rc-flipping-page rc-p1" d="M400,335 L500,335 L500,220 L400,220 Z" />
+                        <path class="rc-flipping-page rc-p2" d="M400,335 L500,335 L500,220 L400,220 Z" />
+                        <path class="rc-flipping-page rc-p3" d="M400,335 L500,335 L500,220 L400,220 Z" />
+                    </g>
+                </g>
+            </svg>
         </div>
 
         <!-- 空闲状态：睡觉猫咪 -->
