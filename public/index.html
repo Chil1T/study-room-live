@@ -364,8 +364,8 @@
             text-align: center;
         }
 
-        /* --- Reading Cat (Middle Decoration) --- */
-        #reading-cat-container {
+        /* --- Reading Book (Middle Decoration) --- */
+        #reading-book-container {
             position: absolute;
             bottom: 210px;
             /* Positioned above the footer */
@@ -473,8 +473,8 @@
             </div>
         </div>
 
-        <!-- Reading Cat Decoration (Bottom Middle) -->
-        <div id="reading-cat-container">
+        <!-- Reading Book Decoration (Bottom Middle) -->
+        <div id="reading-book-container">
             <!-- Modified viewBox to center the book (Spine is at x=400, so 400 - 390/2 = 205) -->
             <svg class="rc-svg" viewBox="205 170 390 185" preserveAspectRatio="xMidYMid meet"
                 xmlns="http://www.w3.org/2000/svg">
@@ -630,6 +630,7 @@
 
         const checkOverlay = document.getElementById('checkmark-overlay');
         const checkPath = document.querySelector('.checkmark-path');
+        const bookContainer = document.getElementById('reading-book-container'); // Book animation container
 
         // --- WebSocket 连接 ---
         function connect() {
@@ -671,6 +672,7 @@
                 // 如果空了，隐藏内容，显示空状态
                 containerWrapper.style.display = 'none';
                 containerWrapper.classList.remove('active');
+                if (bookContainer) bookContainer.style.display = 'none'; // Hide book too
 
                 // 只有当没有显示过空状态时才 fade-in，避免闪烁
                 if (!emptyWrapper.classList.contains('visible')) {
@@ -691,6 +693,7 @@
                 }
 
                 containerWrapper.style.display = 'flex';
+                if (bookContainer) bookContainer.style.display = 'flex'; // Show book too
             }
 
             // 如果锁定中，不切人，只更新当前人的数据（如果还在列表里）
