@@ -135,27 +135,34 @@
         li.log-entry {
             font-size: 150px;
             line-height: 1.2;
-            /* Tighten line height for wrapped text */
             margin-bottom: 8px;
-            /* Increase spacing between entries */
+
+            /* Slide Down Animation Prep */
+            max-height: 0;
             opacity: 0;
-            animation: type-in 0.3s forwards ease-out;
+            overflow: hidden;
+            /* Restore hidden to prevent painting over neighbors during expansion */
+            animation: slide-down 0.5s forwards ease-out;
+
             white-space: normal;
-            /* Allow wrapping */
             word-break: break-word;
-            /* Break long words properly */
         }
 
-        /* 模拟打字机/数据流输入效果 */
-        @keyframes type-in {
+        /* Slide Down + Fade In */
+        @keyframes slide-down {
             0% {
+                max-height: 0;
                 opacity: 0;
                 transform: translateX(-20px);
+                margin-bottom: 0;
             }
 
             100% {
+                max-height: 3000px;
+                /* Increased massively to accommodate 150px font multi-line wrapping */
                 opacity: 1;
                 transform: translateX(0);
+                margin-bottom: 8px;
             }
         }
 
@@ -217,7 +224,7 @@
 
             ws.onopen = () => {
                 console.log('Terminal connected');
-                addSystemLog('CONNECTED');
+                // System log removed
                 if (reconnectTimer) clearInterval(reconnectTimer);
             };
 
@@ -234,18 +241,12 @@
 
             ws.onclose = () => {
                 console.log('Disconnected');
-                addSystemLog('CONNECTION LOST. RETRYING...');
+                // System log removed
                 reconnectTimer = setTimeout(connect, 3000);
             };
         }
 
-        function addSystemLog(text) {
-            const li = document.createElement('li');
-            li.className = 'log-entry';
-            li.style.color = '#777'; // 灰色系统消息
-            li.innerText = `[SYS] ${text}`;
-            listEl.insertBefore(li, listEl.firstChild);
-        }
+
 
         function addRecord(data) {
             const durationMins = Math.floor(data.duration / 60);
@@ -294,7 +295,7 @@
                 <span class="timestamp">${timeStr}</span>
                 <span class="user-tag">USER_${data.username}</span>
                 <span>:: COMPLETED TASK</span>
-                <span class="project-tag"><${data.project}></span>
+                <span class="project-tag">&lt;${data.project}&gt;</span>
                 <span>(+${durationMins}m)</span>
             `;
         }
