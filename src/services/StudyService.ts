@@ -284,7 +284,19 @@ export class StudyService {
   // --- Public API for Admin ---
 
   public getActiveSessions() {
-    return Array.from(this.sessionStates.values());
+    return Array.from(this.sessionStates.values()).map(session => {
+      const currentDuration = Math.floor((Date.now() - session.startTime) / 1000);
+      return {
+        uid: session.uid,
+        username: session.username,
+        face: session.face,
+        project: session.project,
+        startTime: session.startTime,
+        duration: currentDuration, // Computed in seconds
+        targetDuration: session.targetDuration * 60, // Convert minutes to seconds
+        status: session.status
+      };
+    });
   }
 
   public getRecentRecords(limit: number = 50) {
@@ -301,6 +313,18 @@ export class StudyService {
       console.log(`[Admin] Skipping user ${session.username} (${uid})`);
       this.endSession(uid, session.username);
     }
+  }
+
+  public skipAllSessions(): number {
+    const uids = Array.from(this.sessionStates.keys());
+    for (const uid of uids) {
+      const session = this.sessionStates.get(uid);
+      if (session) {
+        console.log(`[Admin] Force ending all: ${session.username}`);
+        this.endSession(uid, session.username);
+      }
+    }
+    return uids.length;
   }
 
   public getUserStats(uid: string) {

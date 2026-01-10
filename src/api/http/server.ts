@@ -59,6 +59,12 @@ export class HttpServer {
       }
     });
 
+    // Skip all users (force end everyone)
+    this.app.post('/api/control/skip-all', (req, res) => {
+      const count = this.studyService.skipAllSessions();
+      res.json({ success: true, count });
+    });
+
     // Get records
     this.app.get('/api/records', (req, res) => {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
