@@ -40,7 +40,6 @@ export class StudyService {
     this.syncFromDb();
 
     this.setupListeners();
-    this.setupListeners();
 
     // Broadcast state to new connections
     this.localWs.on('connection', () => {
@@ -55,6 +54,7 @@ export class StudyService {
 
   private syncFromDb() {
     const activeRecords = this.repo.getAllActive();
+    console.log(`[Study] Loaded ${activeRecords.length} active sessions from DB`);
     for (const rec of activeRecords) {
       this.sessionStates.set(rec.uid, {
         uid: rec.uid,
@@ -278,6 +278,7 @@ export class StudyService {
       count: list.length,
       list: list
     });
+    console.log(`[Study] Broadcasted state: ${list.length} users`);
   }
 
   // --- Public API for Admin ---

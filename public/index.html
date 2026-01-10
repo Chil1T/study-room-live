@@ -377,9 +377,9 @@
         <!-- 正常内容显示区 -->
         <div id="content-wrapper">
             <div class="chalk-header-group chalk-style">
-                <span class="chalk-text-item" id="user-name">Loading...</span>
+                <span style="color: darkturquoise;" class="chalk-text-item" id="user-name">Loading...</span>
                 <span class="chalk-text-item">正在专注</span>
-                <span class="chalk-text-item" id="project-name">...</span>
+                <span style="color:darksalmon;" class="chalk-text-item" id="project-name">...</span>
             </div>
 
             <div class="chalk-progress-bar">
@@ -477,7 +477,8 @@
         <!-- 常驻底部提示 -->
         <div id="hint-footer" class="chalk-style"
             style="position: absolute; bottom: 10px; font-size: 50px; opacity: 0.8; width: 100%; text-align: center;">
-            <span style="color: red ; font-size: 60px">弹幕发送</span><br><span> "打卡 项目 分钟数"(带空格哦~) 开始专注</span><br>
+            <span style="color: red ; font-size: 60px">弹幕发送</span><span>"结束打卡" 休息</span><br><span> "打卡 项目 分钟数"(带空格哦~)
+                开始专注</span><br>
             <span>"AI报告" 获取评价 |
                 "专注统计" 查询数据</span>
         </div>
@@ -607,10 +608,24 @@
             if (currentIndex >= userList.length) currentIndex = 0;
             const data = userList[currentIndex];
 
-            // 格式化时间
-            const currentMins = Math.floor(data.duration / 60);
+            // --- 核心修复: 本地实时计算进度 ---
+            const now = Date.now();
+            // 计算当前经过的秒数 (实时)
+            const elapsedSec = Math.max(0, Math.floor((now - data.startTime) / 1000));
+
+            // 还原"今日已完成"的基础时长
+            // 后端发来的 todayTotal = (历史总和) + (后端截图时的当前时长)
+            // 后端发来的 duration = (后端截图时的当前时长)
+            // 所以 (历史总和) = data.todayTotal - data.duration
+            const completedTotal = Math.max(0, data.todayTotal - data.duration);
+
+            // 实时今日总时长
+            const realDailyTotal = completedTotal + elapsedSec;
+
+            // 格式化分钟
+            const currentMins = Math.floor(elapsedSec / 60);
             const targetMins = Math.floor(data.targetDuration / 60);
-            const dailyMins = Math.floor(data.todayTotal / 60);
+            const dailyMins = Math.floor(realDailyTotal / 60);
 
             // 1. 切换动画
             if (animate) {
@@ -632,15 +647,15 @@
                     // Grow Bar
                     setTimeout(() => {
                         fillBar.style.transition = 'width 1s cubic-bezier(0.25, 1, 0.5, 1)';
-                        updateProgressBar(data.duration, data.targetDuration);
+                        updateProgressBar(elapsedSec, data.targetDuration);
                     }, 100);
 
                 }, 1200);
             }
-            // 2. 仅更新数据
+            // 2. 仅更新数据 (每秒调用走这里)
             else {
                 updateTextContent(data.username, data.project, currentMins, targetMins, dailyMins);
-                updateProgressBar(data.duration, data.targetDuration);
+                updateProgressBar(elapsedSec, data.targetDuration);
             }
         }
 
