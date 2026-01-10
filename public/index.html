@@ -175,19 +175,15 @@
         /* --- Checkmark Animation --- */
         #checkmark-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            /* Position near the progress bar (which is 90% wide, centered) */
+            /* Progress bar ends at: 50% + 45% = 95% from left, minus some padding */
+            top: 50px;
+            /* Align with content-wrapper top area */
+            right: 5%;
+            /* Align with progress bar right edge (100% - 90%)/2 = 5% */
             display: flex;
             justify-content: flex-end;
-            /* Align right */
-            align-items: flex-end;
-            /* Align bottom */
-            padding-right: 80px;
-            /* Offset from right edge */
-            padding-bottom: 50px;
-            /* Offset from bottom edge */
+            align-items: center;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.5s ease;
@@ -199,11 +195,10 @@
         }
 
         .checkmark-svg {
-            width: 180px;
-            /* Smaller size */
-            height: 180px;
-            transform: rotate(-15deg);
-            /* Natural angle */
+            width: 120px;
+            height: 120px;
+            transform: rotate(-15deg) translateX(-20px);
+            /* Shift left slightly to not overflow */
             filter: drop-shadow(0px 0px 5px rgba(255, 100, 100, 0.8));
         }
 
