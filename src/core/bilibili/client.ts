@@ -43,9 +43,9 @@ export class BilibiliClient extends EventEmitter {
   async startApp(): Promise<boolean> {
     try {
       console.log('[BilibiliClient] Starting App...');
-      
+
       // Try to end previous session first to be safe
-      await this.endApp().catch(() => {});
+      await this.endApp().catch(() => { });
 
       const params = {
         code: config.bilibili.accessToken,
@@ -53,12 +53,12 @@ export class BilibiliClient extends EventEmitter {
       };
 
       const res = await this.api.post<StartGameResponse>('/v2/app/start', params);
-      
+
       if (res.data.code === 0) {
         const { game_info, websocket_info } = res.data.data;
         this.gameId = game_info.game_id;
         console.log(`[BilibiliClient] App started. GameID: ${this.gameId}`);
-        
+
         // Start HTTP Heartbeat
         this.startHttpHeartbeat();
 
@@ -66,7 +66,7 @@ export class BilibiliClient extends EventEmitter {
         const wsUrl = websocket_info.wss_link[0];
         const authBody = websocket_info.auth_body;
         await this.connectWs(wsUrl, authBody);
-        
+
         return true;
       } else if (res.data.code === 7002) {
         // Room duplicate game error
@@ -91,13 +91,13 @@ export class BilibiliClient extends EventEmitter {
    */
   async endApp(): Promise<void> {
     const gid = this.gameId; // Use current gameId if available
-    
+
     // Even if we don't have local gameId, we should try to close using AppID to clear ghost sessions
     const params: any = {
       app_id: Number(config.bilibili.appId)
     };
     if (gid) {
-        params.game_id = gid;
+      params.game_id = gid;
     }
 
     try {
@@ -113,7 +113,7 @@ export class BilibiliClient extends EventEmitter {
 
   private startHttpHeartbeat() {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-    
+
     this.heartbeatTimer = setInterval(async () => {
       if (!this.gameId) return;
       try {
@@ -134,14 +134,14 @@ export class BilibiliClient extends EventEmitter {
         // Send Auth Packet
         const packet = BiliProtocol.encode(authBody, WsOp.USER_AUTHENTICATION);
         this.ws?.send(packet);
-        
+
         // Start WS Heartbeat (30s)
         this.wsHeartbeatTimer = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send(BiliProtocol.encode(Buffer.alloc(0), WsOp.HEARTBEAT));
           }
         }, 30000);
-        
+
         resolve();
       });
 
@@ -154,25 +154,44 @@ export class BilibiliClient extends EventEmitter {
 
       this.ws.on('error', (err) => {
         console.error('[BilibiliClient] WebSocket Error:', err.message);
-        // Emitting error might be useful
+        if (!this.isDestroyed) {
+          // Trigger close to handle reconnect
+          this.ws?.close();
+        }
       });
 
       this.ws.on('close', () => {
         console.log('[BilibiliClient] WebSocket closed');
-        if (!this.isDestroyed && this.gameId) {
-            // Reconnect logic could go here
-            console.log('[BilibiliClient] Attempting reconnect in 5s...');
-            setTimeout(() => {
-                 // Ideally we should re-fetch wss link, but simplified for now
-            }, 5000);
+        if (!this.isDestroyed) {
+          console.warn('[BilibiliClient] Unexpected disconnect. Reconnecting in 5s...');
+          setTimeout(() => {
+            this.reconnect();
+          }, 5000);
         }
       });
     });
   }
 
+  private async reconnect() {
+    this.cleanup(); // Clean up partial state (timers, old ws)
+    console.log('[BilibiliClient] Reconnecting...');
+
+    try {
+      // Must restart App to get fresh WSS link (old one might be invalid after IP change)
+      const success = await this.startApp();
+      if (!success) {
+        console.error('[BilibiliClient] Reconnect failed, retrying again in 10s...');
+        setTimeout(() => this.reconnect(), 10000);
+      }
+    } catch (e) {
+      console.error('[BilibiliClient] Reconnect Exception:', e);
+      setTimeout(() => this.reconnect(), 10000);
+    }
+  }
+
   private handlePacket(packet: { header: any, body: any }) {
     const { header, body } = packet;
-    
+
     switch (header.op) {
       case WsOp.CONNECT_SUCCESS:
         console.log('[BilibiliClient] Auth Success');
@@ -183,7 +202,7 @@ export class BilibiliClient extends EventEmitter {
       case WsOp.MESSAGE:
         // Dispatch 'message' event for the Service layer to handle
         if (body.cmd) {
-            this.emit('message', body as BilibiliMessage);
+          this.emit('message', body as BilibiliMessage);
         }
         break;
     }
@@ -191,17 +210,19 @@ export class BilibiliClient extends EventEmitter {
 
   private cleanup() {
     if (this.heartbeatTimer) {
-        clearInterval(this.heartbeatTimer);
-        this.heartbeatTimer = null;
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
     if (this.wsHeartbeatTimer) {
-        clearInterval(this.wsHeartbeatTimer);
-        this.wsHeartbeatTimer = null;
+      clearInterval(this.wsHeartbeatTimer);
+      this.wsHeartbeatTimer = null;
     }
     if (this.ws) {
-        this.ws.removeAllListeners();
-        this.ws.terminate();
-        this.ws = null;
+      this.ws.removeAllListeners();
+      // Don't call close() here if called from reconnect/close event to avoid loops
+      // just terminate
+      this.ws.terminate();
+      this.ws = null;
     }
     this.gameId = null;
   }
