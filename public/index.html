@@ -42,6 +42,8 @@
         /* 3. 动画包装器 */
         #content-wrapper {
             width: 100%;
+            position: relative;
+            /* Ensure absolute children (badge) position correctly */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -152,6 +154,39 @@
             background-color: #72fb99;
             /* Light Green */
             transition: background-color 0.5s ease;
+        }
+
+        /* Resting State: Blue Progress Bar */
+        .chalk-progress-fill.resting {
+            background-color: #64b5f6;
+            /* Light Blue */
+            transition: background-color 0.5s ease;
+        }
+
+        /* Multi-Round Badge */
+        .chalk-round-badge {
+            position: absolute;
+            right: 15px;
+            /* Adjust based on bar width (90%) */
+            top: 140px;
+            /* Adjust vertically to align with bar */
+            /* Using top relative to content-wrapper might be fragile, but effective. 
+               Bar is roughly: Header (60px + gap) ... 
+               Let's try absolute positioning relative to the wrapper center?
+            */
+            top: 50%;
+            /* Center vertically first */
+            transform: translateY(-50%) rotate(15deg);
+
+            font-family: 'Pangolin', 'ZCOOL KuaiLe', sans-serif;
+            color: #ffdd44;
+            /* Yellowish */
+            font-size: 36px;
+            font-weight: bold;
+            filter: url(#chalk-filter);
+            text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.3);
+            z-index: 5;
+            white-space: nowrap;
         }
 
         .chalk-footer-group {
@@ -580,7 +615,7 @@
         <!-- 常驻底部提示 -->
         <div id="hint-footer" class="chalk-style"
             style="position: absolute; bottom: 10px; font-size: 50px; opacity: 0.8; width: 100%; text-align: center;">
-            <span style="color: red ; font-size: 60px">弹幕发送</span><span>"结束打卡" 休息</span><br><span> "打卡 项目 分钟数"(带空格哦~)
+            <span style="color: red ; font-size: 60px">弹幕发送</span><span>"结束打卡" 休息</span><br><span> "打卡 项目 分钟数 x次"空格分隔
                 开始专注</span><br>
             <span>"AI报告" 获取评价 |
                 "专注统计" 查询数据</span>
@@ -611,9 +646,9 @@
         let currentIndex = 0;
         let ws = null;
         let reconnectTimer = null;
-        // Duplicate removed
         let carouselTimer = null;
         let carouselInterval = 15000; // Default
+        let breakDuration = 300; // Default 5 mins (seconds)
 
         // 锁定状态：当有人完成时，锁定轮播，展示动画
         let isLocked = false;
@@ -627,6 +662,14 @@
         const elCurrentInfo = document.getElementById('current-time-info');
         const elDailyInfo = document.getElementById('daily-total-info');
         const fillBar = document.querySelector('.chalk-progress-fill');
+
+        // New Badge Element
+        const elRoundBadge = document.createElement('div');
+        elRoundBadge.className = 'chalk-round-badge';
+        elRoundBadge.style.display = 'none';
+        // Insert badge after progress bar (we'll adjust CSS to position it)
+        document.querySelector('.chalk-progress-bar').parentNode.insertBefore(elRoundBadge, document.querySelector('.chalk-progress-bar').nextSibling);
+
 
         const checkOverlay = document.getElementById('checkmark-overlay');
         const checkPath = document.querySelector('.checkmark-path');
@@ -667,6 +710,9 @@
             const wasEmpty = userList.length === 0;
             userList = newList;
             const isEmpty = userList.length === 0;
+
+            // Debug: Print received list (user can check browser console)
+            console.log("State Update Received:", newList);
 
             if (isEmpty) {
                 // 如果空了，隐藏内容，显示空状态
@@ -716,22 +762,59 @@
 
             // --- 核心修复: 本地实时计算进度 ---
             const now = Date.now();
-            // 计算当前经过的秒数 (实时)
-            const elapsedSec = Math.max(0, Math.floor((now - data.startTime) / 1000));
+            let elapsedSec = 0;
+            let targetSec = data.targetDuration;
 
-            // 还原"今日已完成"的基础时长
-            // 后端发来的 todayTotal = (历史总和) + (后端截图时的当前时长)
-            // 后端发来的 duration = (后端截图时的当前时长)
-            // 所以 (历史总和) = data.todayTotal - data.duration
-            const completedTotal = Math.max(0, data.todayTotal - data.duration);
+            // 状态判断
+            const isResting = data.status === 'resting';
 
-            // 实时今日总时长
-            const realDailyTotal = completedTotal + elapsedSec;
+            if (isResting) {
+                // 休息模式
+                // 休息时间从 restStartTime 开始
+                // 如果没有 restStartTime (兼容旧数据)，回退到 now
+                const start = data.restStartTime || now;
+                elapsedSec = Math.max(0, Math.floor((now - start) / 1000));
+                targetSec = breakDuration; // From config
+            } else {
+                // 学习模式
+                elapsedSec = Math.max(0, Math.floor((now - data.startTime) / 1000));
+            }
+
+            // 还原"今日已完成"的基础时长 (仅针对学习时间)
+            // 后端发来的 todayTotal 是学习总时长
+            // 如果是休息，todayTotal 不变
+            const todayTotalRaw = data.todayTotal || 0;
+            // 如果正在学习，后端发来的 todayTotal 包含当前 session 的 duration
+            // 我们需要减去后端发来的 duration，加上前端计算的 reliable duration
+            // 但为简便且避免跳变，我们直接用后端发来的 + 差值?
+            // 不，沿用之前的逻辑：
+            let realDailyTotal = todayTotalRaw;
+            if (!isResting) {
+                // The old logic:
+                // const completedTotal = Math.max(0, data.todayTotal - data.duration);
+                // realDailyTotal = completedTotal + elapsedSec;
+
+                // 其实对于展示来说，直接用 duration 估算即可，微小误差不影响
+                // 这里为了平滑动画，使用 elapsedSec 更新
+                const backendDuration = data.duration || 0;
+                // 差值修正 (前端比后端快/慢)
+                const diff = elapsedSec - backendDuration;
+                realDailyTotal = todayTotalRaw + diff;
+            }
 
             // 格式化分钟
             const currentMins = Math.floor(elapsedSec / 60);
-            const targetMins = Math.floor(data.targetDuration / 60);
+            const targetMins = Math.floor(targetSec / 60);
             const dailyMins = Math.floor(realDailyTotal / 60);
+
+            // 更新 Badge
+            if (data.totalRounds > 1) {
+                const remaining = data.totalRounds - data.currentRound;
+                elRoundBadge.textContent = `×${remaining}`;
+                elRoundBadge.style.display = 'block';
+            } else {
+                elRoundBadge.style.display = 'none';
+            }
 
             // 1. 切换动画
             if (animate) {
@@ -739,11 +822,13 @@
                 containerWrapper.classList.add("state-erasing");
 
                 setTimeout(() => {
-                    updateTextContent(data.username, data.project, currentMins, targetMins, dailyMins);
+                    updateUIContent(data, isResting, currentMins, targetMins, dailyMins, elapsedSec);
 
                     // Reset Bar
                     fillBar.style.transition = 'none';
-                    fillBar.classList.remove('finished'); // Reset color
+                    fillBar.className = 'chalk-progress-fill'; // Reset classes
+                    if (isResting) fillBar.classList.add('resting');
+
                     containerDiv.style.setProperty('--progress-percent', '0%');
                     void fillBar.offsetWidth; // Force Reflow
 
@@ -753,28 +838,40 @@
                     // Grow Bar
                     setTimeout(() => {
                         fillBar.style.transition = 'width 1s cubic-bezier(0.25, 1, 0.5, 1)';
-                        updateProgressBar(elapsedSec, data.targetDuration);
+                        updateProgressBar(elapsedSec, targetSec);
                     }, 100);
 
                 }, 1200);
             }
-            // 2. 仅更新数据 (每秒调用走这里)
+            // 2. 仅更新数据 (每秒调用)
             else {
-                updateTextContent(data.username, data.project, currentMins, targetMins, dailyMins);
-                updateProgressBar(elapsedSec, data.targetDuration);
+                updateUIContent(data, isResting, currentMins, targetMins, dailyMins, elapsedSec);
+
+                // Update Bar Style if changed roughly (unlikely without animate, but good for safety)
+                if (isResting && !fillBar.classList.contains('resting')) fillBar.classList.add('resting');
+                if (!isResting && fillBar.classList.contains('resting')) fillBar.classList.remove('resting');
+
+                updateProgressBar(elapsedSec, targetSec);
             }
         }
 
-        function updateTextContent(user, project, current, target, daily) {
-            elUser.textContent = user;
-            elProject.textContent = project;
-            elCurrentInfo.textContent = `进度: ${current} / ${target}分`;
+        function updateUIContent(data, isResting, current, target, daily) {
+            elUser.textContent = data.username;
+
+            if (isResting) {
+                elProject.textContent = "休息中... ☕";
+                elCurrentInfo.textContent = `休息: ${current} / ${target}分`;
+            } else {
+                elProject.textContent = data.project;
+                elCurrentInfo.textContent = `进度: ${current} / ${target}分`;
+            }
+
             elDailyInfo.textContent = `当日: ${daily}分钟`;
         }
 
         function updateProgressBar(currentSec, targetSec) {
             let percent = (currentSec / targetSec) * 100;
-            if (percent > 100) percent = 100;
+            if (percent > 100) percent = 100; // Cap at 100
             containerDiv.style.setProperty('--progress-percent', percent + '%');
         }
 
@@ -841,11 +938,14 @@
                 if (data.displayDuration && data.displayDuration.index) {
                     carouselInterval = data.displayDuration.index;
                 }
+                if (data.multiSession && data.multiSession.breakDuration) {
+                    breakDuration = data.multiSession.breakDuration / 1000; // ms to s
+                }
             } catch (e) {
                 console.warn("Config Load Error", e);
             }
 
-            console.log(`[Index] Carousel Interval: ${carouselInterval}ms`);
+            console.log(`[Index] Carousel Interval: ${carouselInterval}ms, Break: ${breakDuration}s`);
 
             setInterval(() => {
                 if (userList.length > 1) {

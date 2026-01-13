@@ -11,13 +11,14 @@ configRouter.get('/', (req, res) => {
         displayDuration: config.displayDuration,
         ai: {
             prompts: config.ai.prompts
-        }
+        },
+        multiSession: config.multiSession
     });
 });
 
 // Update configs
 configRouter.post('/', async (req, res) => {
-    const { displayDuration, aiPrompts } = req.body;
+    const { displayDuration, aiPrompts, multiSession } = req.body;
 
     // 1. Update Runtime Config
     if (displayDuration) {
@@ -28,6 +29,12 @@ configRouter.post('/', async (req, res) => {
     if (aiPrompts) {
         if (aiPrompts.widget) config.ai.prompts.widget = aiPrompts.widget;
         // Add user custom prompt if needed in future
+    }
+
+    if (multiSession) {
+        if (multiSession.breakDuration) {
+            config.multiSession.breakDuration = parseInt(multiSession.breakDuration);
+        }
     }
 
     // 2. Try to persist to .env (Simple regex replacement)
@@ -48,6 +55,10 @@ configRouter.post('/', async (req, res) => {
         if (displayDuration) {
             if (displayDuration.widget) updateKey('DISPLAY_DURATION_WIDGET', displayDuration.widget);
             if (displayDuration.index) updateKey('DISPLAY_DURATION_INDEX', displayDuration.index);
+        }
+
+        if (multiSession && multiSession.breakDuration) {
+            updateKey('BREAK_DURATION', multiSession.breakDuration);
         }
 
         if (aiPrompts) {

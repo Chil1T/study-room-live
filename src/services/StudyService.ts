@@ -11,7 +11,11 @@ interface StudySessionState {
   project: string;
   startTime: number;
   targetDuration: number; // minutes
-  status: 'studying' | 'finished';
+  status: 'studying' | 'resting' | 'finished';
+  // Multi-session fields
+  currentRound: number;    // 当前轮次 (1-indexed)
+  totalRounds: number;     // 总轮次
+  restStartTime?: number;  // 休息开始时间
 }
 
 import { AIService } from './AIService';
@@ -62,7 +66,9 @@ export class StudyService {
         project: rec.project,
         startTime: rec.start_time,
         targetDuration: rec.target_duration || 60,
-        status: 'studying'
+        status: 'studying',
+        currentRound: 1,
+        totalRounds: 1
       });
     }
   }
@@ -78,30 +84,70 @@ export class StudyService {
     let stateChanged = false;
 
     for (const [uid, session] of this.sessionStates.entries()) {
+      // Skip finished sessions
       if (session.status === 'finished') continue;
 
+      // Handle RESTING state
+      if (session.status === 'resting') {
+        const restElapsed = now - (session.restStartTime || now);
+        if (restElapsed >= config.multiSession.breakDuration) {
+          // Rest complete, start next round
+          session.currentRound++;
+          session.status = 'studying';
+          session.startTime = Date.now();
+          session.restStartTime = undefined;
+
+          console.log(`[Study] ${session.username} starting round ${session.currentRound}/${session.totalRounds}`);
+
+          // Broadcast round start event
+          this.localWs.broadcast('ROUND_START', {
+            uid,
+            username: session.username,
+            currentRound: session.currentRound,
+            totalRounds: session.totalRounds
+          });
+
+          stateChanged = true;
+        }
+        continue; // Don't check study progress while resting
+      }
+
+      // Handle STUDYING state
       const durationSeconds = Math.floor((now - session.startTime) / 1000);
       const targetSeconds = session.targetDuration * 60;
 
       if (durationSeconds >= targetSeconds) {
-        // Target reached!
-        console.log(`[Study] User ${session.username} reached target!`);
+        // Round complete!
+        console.log(`[Study] ${session.username} completed round ${session.currentRound}/${session.totalRounds}`);
 
-        // 1. Mark as finished
-        session.status = 'finished';
+        if (session.currentRound < session.totalRounds) {
+          // More rounds to go - enter rest
+          session.status = 'resting';
+          session.restStartTime = Date.now();
 
-        // 2. Broadcast specific event
-        this.localWs.broadcast('SESSION_COMPLETE', {
-          uid,
-          username: session.username,
-          project: session.project,
-          duration: durationSeconds
-        });
+          this.localWs.broadcast('ROUND_COMPLETE', {
+            uid,
+            username: session.username,
+            currentRound: session.currentRound,
+            totalRounds: session.totalRounds,
+            nextRestDuration: config.multiSession.breakDuration
+          });
+        } else {
+          // All rounds complete!
+          session.status = 'finished';
 
-        // 3. Schedule removal (delayed endSession)
-        setTimeout(() => {
-          this.endSession(uid, session.username);
-        }, 20000); // 20 seconds delay
+          this.localWs.broadcast('SESSION_COMPLETE', {
+            uid,
+            username: session.username,
+            project: session.project,
+            duration: durationSeconds,
+            totalRounds: session.totalRounds
+          });
+
+          setTimeout(() => {
+            this.endSession(uid, session.username);
+          }, 20000);
+        }
 
         stateChanged = true;
       }
@@ -140,20 +186,23 @@ export class StudyService {
     console.log(`[Danmu] ${username}: ${content}`);
 
     // Command Parsing
-    // 1. Clock In: "打卡 学习 60" or "打卡 学习 2小时"
-    const startMatch = content.match(/^(?:打卡|开始)\s+(\S+)(?:\s+(\d+(?:\.\d+)?)\s*(分钟|min|h|小时)?)?/i);
+    // 1. Clock In: "打卡 学习 60" or "打卡 学习 2小时" or "打卡 学习 45 3次"
+    const startMatch = content.match(/^(?:打卡|开始)\s+(\S+)(?:\s+(\d+(?:\.\d+)?)(?:\s*(分钟|min|h|小时))?)?(?:\s+(\d+)\s*次)?/i);
 
     if (startMatch) {
       const project = startMatch[1] || '自习';
       let durationVal = startMatch[2] ? parseFloat(startMatch[2]) : 60; // Default 60 mins
       const unit = startMatch[3];
+      const rounds = startMatch[4] ? parseInt(startMatch[4]) : 1; // Default 1 round
 
       // Convert to minutes
       if (unit === 'h' || unit === '小时') {
         durationVal = durationVal * 60;
       }
 
-      this.startSession(uid, username, face, project, Math.floor(durationVal));
+      console.log(`[Session Start] User: ${username}, Project: ${project}, Duration: ${durationVal}m, Rounds: ${rounds}`);
+
+      this.startSession(uid, username, face, project, Math.floor(durationVal), Math.max(1, rounds));
       return;
     }
 
@@ -215,7 +264,7 @@ export class StudyService {
     }
   }
 
-  private startSession(uid: string, username: string, face: string, project: string, targetDuration: number) {
+  private startSession(uid: string, username: string, face: string, project: string, targetDuration: number, totalRounds: number = 1) {
     // Check if already started
     const ongoing = this.repo.findOngoing(uid);
     if (ongoing) {
@@ -231,10 +280,13 @@ export class StudyService {
         project,
         startTime: Date.now(),
         targetDuration,
-        status: 'studying'
+        status: 'studying',
+        currentRound: 1,
+        totalRounds
       });
 
-      console.log(`[Study] User ${username} started: ${project} (${targetDuration} mins)`);
+      const roundInfo = totalRounds > 1 ? ` x ${totalRounds}轮` : '';
+      console.log(`[Study] User ${username} started: ${project} (${targetDuration} mins${roundInfo})`);
     }
 
     this.broadcastState();
@@ -270,7 +322,10 @@ export class StudyService {
         duration: currentDuration, // In Seconds
         targetDuration: session.targetDuration * 60, // In Seconds
         todayTotal: previousTotal + currentDuration,
-        status: session.status // 'studying' or 'finished'
+        status: session.status, // 'studying', 'resting', or 'finished'
+        currentRound: session.currentRound,
+        totalRounds: session.totalRounds,
+        restStartTime: session.restStartTime
       };
     });
 
@@ -294,7 +349,10 @@ export class StudyService {
         startTime: session.startTime,
         duration: currentDuration, // Computed in seconds
         targetDuration: session.targetDuration * 60, // Convert minutes to seconds
-        status: session.status
+        status: session.status,
+        currentRound: session.currentRound,
+        totalRounds: session.totalRounds,
+        restStartTime: session.restStartTime
       };
     });
   }

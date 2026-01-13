@@ -25,5 +25,8 @@ export const config = {
   displayDuration: {
     widget: process.env.DISPLAY_DURATION_WIDGET ? parseInt(process.env.DISPLAY_DURATION_WIDGET) : 30000,
     index: process.env.DISPLAY_DURATION_INDEX ? parseInt(process.env.DISPLAY_DURATION_INDEX) : 15000,
+  },
+  multiSession: {
+    breakDuration: process.env.BREAK_DURATION ? parseInt(process.env.BREAK_DURATION) : 300000, // 5 minutes default
   }
 };

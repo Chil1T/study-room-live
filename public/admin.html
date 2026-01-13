@@ -263,7 +263,7 @@
                 <span>⚙️ 系统配置 (System Config)</span>
             </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Display Durations -->
                 <div class="space-y-4">
                     <h3 class="font-medium text-gray-800">显示时长 (秒)</h3>
@@ -276,6 +276,17 @@
                         <label class="block text-sm text-gray-500 mb-1">主页轮播间隔 (秒)</label>
                         <input type="number" x-model="config.displayDuration.index"
                             class="w-full border rounded p-2 text-sm">
+                    </div>
+                </div>
+
+                <!-- Multi-Session Config -->
+                <div class="space-y-4">
+                    <h3 class="font-medium text-gray-800">多轮专注配置</h3>
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-1">轮次间休息时长 (秒)</label>
+                        <input type="number" x-model="config.multiSession.breakDuration"
+                            class="w-full border rounded p-2 text-sm">
+                        <p class="text-xs text-gray-400 mt-1">用户发送 "打卡 项目 45 3次" 时，每轮之间的休息时间</p>
                     </div>
                 </div>
 
@@ -487,11 +498,13 @@
             return {
                 config: {
                     displayDuration: { widget: 30000, index: 15000 },
-                    aiPrompts: { widget: '' }
+                    aiPrompts: { widget: '' },
+                    multiSession: { breakDuration: 300 } // seconds for display
                 },
                 defaults: {
                     displayDuration: { widget: 15, index: 10 },
-                    aiPrompts: { widget: "用户：{{username}}\n时长：{{duration}}分钟\n任务：以自习室猫娘老板身份，用一句话（20字以内）评价该用户.格式:(您已专注x时x分,……)。风格：基于数据,幽默揶揄或温柔夸奖,每句话后面都带喵。" }
+                    aiPrompts: { widget: "用户：{{username}}\n时长：{{duration}}分钟\n任务：以自习室猫娘老板身份，用一句话（20字以内）评价该用户.格式:(您已专注x时x分,……)。风格：基于数据,幽默揶揄或温柔夸奖,每句话后面都带喵。" },
+                    multiSession: { breakDuration: 300 } // 5 minutes default
                 },
                 saving: false,
 
@@ -509,6 +522,9 @@
                             this.config.displayDuration.index = data.displayDuration.index / 1000;
                         }
                         if (data.ai && data.ai.prompts) this.config.aiPrompts = data.ai.prompts;
+                        if (data.multiSession) {
+                            this.config.multiSession.breakDuration = data.multiSession.breakDuration / 1000; // ms to s
+                        }
                     } catch (e) {
                         console.error("Config Load Error", e);
                     }
@@ -523,7 +539,10 @@
                                 widget: this.config.displayDuration.widget * 1000,
                                 index: this.config.displayDuration.index * 1000
                             },
-                            aiPrompts: this.config.aiPrompts
+                            aiPrompts: this.config.aiPrompts,
+                            multiSession: {
+                                breakDuration: this.config.multiSession.breakDuration * 1000 // s to ms
+                            }
                         };
 
                         const res = await fetch('/api/config', {
@@ -546,6 +565,7 @@
                     this.config.displayDuration.widget = this.defaults.displayDuration.widget;
                     this.config.displayDuration.index = this.defaults.displayDuration.index;
                     this.config.aiPrompts.widget = this.defaults.aiPrompts.widget;
+                    this.config.multiSession.breakDuration = this.defaults.multiSession.breakDuration;
                 }
             }
         }
