@@ -17,239 +17,123 @@
     </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen p-8" x-data="adminApp()">
+<body class="bg-gray-100 min-h-screen p-4" x-data="adminApp()" x-cloak>
+    <div class="max-w-6xl mx-auto space-y-6">
 
-    <div class="max-w-screen mx-auto space-y-8">
         <!-- Header -->
-        <header class="flex justify-between items-center bg-white p-6 rounded-lg shadow-sm">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">Study Room Admin</h1>
-                <p class="text-gray-500">直播间后台管理系统</p>
+        <header class="bg-white p-4 rounded-lg shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                    S
+                </div>
+                <h1 class="text-xl font-bold text-gray-800">Study Room Live <span class="text-xs font-normal text-gray-500 ml-2">v1.2</span></h1>
             </div>
-            <div class="text-right">
-                <div class="text-sm text-gray-400">Status</div>
-                <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span class="font-mono text-green-600">ONLINE</span>
+            <div class="flex items-center gap-4 text-sm">
+                <a href="/" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1">
+                    <span>📺</span> 计时器页
+                </a>
+                <a href="/stats.html" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1">
+                    <span>📊</span> 排行榜
+                </a>
+                <a href="/ai_widget.html" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1">
+                    <span>🤖</span> AI挂件
+                </a>
+                <div class="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    System Online
                 </div>
             </div>
         </header>
 
         <!-- Current Session Control -->
-        <section class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h2 class="text-lg font-semibold text-gray-700">当前直播状态</h2>
-                <button x-show="activeSessions.length > 0" @click="skipAllUsers()"
-                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                    </svg>
-                    全部强制结束
-                </button>
-            </div>
-
-            <template x-if="activeSessions.length === 0">
-                <div
-                    class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border-dashed border-2 border-gray-200">
-                    <p class="text-xl">😴 当前没有正在学习的用户</p>
-                    <p class="text-sm mt-2">等待观众发送 "打卡 项目" ...</p>
-                </div>
-            </template>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <template x-for="session in activeSessions" :key="session.uid">
-                    <div
-                        class="bg-blue-50 p-4 rounded-lg flex flex-col gap-3 relative overflow-hidden group hover:shadow-md transition">
-                        <!-- BG Icon -->
-                        <div class="absolute -right-4 -bottom-4 text-9xl text-blue-100 opacity-50 select-none z-0">
-                            ⏳
-                        </div>
-
-                        <div class="relative z-10 flex justify-between items-start">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center text-xl font-bold text-blue-600">
-                                    <span x-text="session.username.substring(0,1)"></span>
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Active Users List -->
+            <div class="md:col-span-2 bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-lg font-semibold text-gray-700 mb-4 flex justify-between items-center">
+                    <span>👥 当前专注中 (Active Sessions)</span>
+                    <span class="text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded-full" x-text="activeSessions.length + ' 人'"></span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <template x-for="user in activeSessions" :key="user.uid">
+                        <div class="border rounded-lg p-4 flex flex-col gap-2 relative bg-gray-50 hover:bg-white transition-all hover:shadow-md">
+                            <div class="flex justify-between items-start">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                        <span x-text="user.username.substring(0,1)"></span>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-gray-800" x-text="user.username"></div>
+                                        <div class="text-xs text-gray-500 font-mono">UID: <span x-text="user.uid"></span></div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="font-bold text-lg" x-text="session.username"></h3>
-                                    <p class="text-xs text-gray-500" x-text="'UID: ' + session.uid"></p>
+                                <button @click="skipUser(user.uid)" class="text-red-500 hover:bg-red-50 p-1 rounded transition" title="强制结束">
+                                    🛑
+                                </button>
+                            </div>
+                            
+                            <div class="mt-2 text-sm bg-white p-2 rounded border border-gray-100">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">项目:</span>
+                                    <span class="font-medium text-gray-800" x-text="user.project || '自习'"></span>
                                 </div>
-                            </div>
-                            <div class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-bold">
-                                正在学习
-                            </div>
-                        </div>
-
-                        <div class="relative z-10 space-y-1">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-500">项目:</span>
-                                <span class="font-medium" x-text="session.project"></span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-500">进度:</span>
-                                <span>
-                                    <span class="font-mono font-bold text-blue-600"
-                                        x-text="formatTime(session.duration)"></span>
-                                    <span class="text-gray-400">/</span>
-                                    <span class="text-sm text-gray-400"
-                                        x-text="Math.floor(session.targetDuration/60) + 'm'"></span>
-                                </span>
-                            </div>
-                            <!-- Progres Bar -->
-                            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                <div class="bg-blue-500 h-2 rounded-full transition-all duration-1000"
-                                    :style="`width: ${Math.min((session.duration / session.targetDuration) * 100, 100)}%`">
+                                <div class="flex justify-between mt-1">
+                                    <span class="text-gray-500">进度:</span>
+                                    <span class="font-mono text-blue-600">
+                                        <span x-text="formatTime(user.duration)"></span> / 
+                                        <span x-text="formatTime(user.targetDuration)"></span>
+                                    </span>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="relative z-10 pt-2 border-t border-blue-100 flex justify-end">
-                            <button @click="skipUser(session.uid)"
-                                class="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-medium transition flex items-center gap-2 group-hover:bg-red-500 group-hover:text-white">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                                强制结束 / 跳过 (Skip)
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </section>
-
-        <!-- Records Management -->
-        <section class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-gray-500">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h2 class="text-lg font-semibold text-gray-700">最近打卡记录 (Top 50)</h2>
-                <button @click="loadRecords" class="text-sm text-blue-500 hover:underline">刷新列表 ↻</button>
-            </div>
-
-            <div class="overflow-x-auto max-h-64 overflow-y-auto">
-                <table class="w-full text-sm text-left text-gray-500">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
-                        <tr>
-                            <th scope="col" class="px-6 py-3">ID</th>
-                            <th scope="col" class="px-6 py-3">UID</th>
-                            <th scope="col" class="px-6 py-3">用户</th>
-                            <th scope="col" class="px-6 py-3">项目</th>
-                            <th scope="col" class="px-6 py-3 text-right">学习时长</th>
-                            <th scope="col" class="px-6 py-3 text-right">时间</th>
-                            <th scope="col" class="px-6 py-3 text-center">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-if="records.length === 0">
-                            <tr>
-                                <td colspan="7" class="px-6 py-8 text-center text-gray-400">暂无历史记录</td>
-                            </tr>
-                        </template>
-
-                        <template x-for="record in records" :key="record.id">
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4 font-mono text-gray-400" x-text="record.id"></td>
-                                <td class="px-6 py-4 text-gray-500 font-mono text-xs" x-text="record.uid"></td>
-                                <td class="px-6 py-4 font-medium text-gray-900" x-text="record.user"></td>
-                                <td class="px-6 py-4">
-                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs"
-                                        x-text="record.project"></span>
-                                </td>
-                                <td class="px-6 py-4 text-right font-mono"
-                                    x-text="Math.floor(record.duration / 60) + ' min'"></td>
-                                <td class="px-6 py-4 text-right text-gray-400" x-text="formatDate(record.start_time)">
-                                </td>
-                                <td class="px-6 py-4 text-center">
-                                    <button @click="deleteRecord(record.id)"
-                                        class="text-red-500 hover:text-red-700 font-medium hover:underline">
-                                        删除
-                                    </button>
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- New: Data Insights & AI Summary -->
-        <section class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-purple-500"
-            x-data="{ queryUid: '', stats: null, aiLoading: false, aiText: '' }">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4 border-b pb-2 flex items-center gap-2">
-                <span>📊 数据洞察 & AI 总结</span>
-                <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">New</span>
-            </h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Left: Query Form -->
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">查询用户 (UID 或 昵称)</label>
-                        <div class="flex gap-2">
-                            <input type="text" x-model="queryUid" placeholder="输入 UID 或 用户名..."
-                                class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 border p-2">
-                            <button @click="fetchUserStats(queryUid)"
-                                class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition">
-                                查询
-                            </button>
-                        </div>
-                    </div>
-
-                    <template x-if="stats">
-                        <div class="bg-purple-50 p-4 rounded-lg space-y-2">
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">累计参与:</span>
-                                <span class="font-bold text-gray-800" x-text="stats.total_sessions + ' 次'"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">总学习时长:</span>
-                                <span class="font-bold text-gray-800"
-                                    x-text="Math.floor(stats.total_duration_seconds / 60) + ' 分钟'"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">最爱科目:</span>
-                                <span class="font-bold text-gray-800" x-text="stats.top_project || '-'"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">活跃天数:</span>
-                                <span class="font-bold text-gray-800" x-text="stats.active_days + ' 天'"></span>
+                                <!-- Progress Bar -->
+                                <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2 overflow-hidden">
+                                    <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-1000"
+                                         :style="'width: ' + Math.min(100, (user.duration / user.targetDuration) * 100) + '%'"></div>
+                                </div>
                             </div>
                         </div>
                     </template>
+
+                    <div x-show="activeSessions.length === 0" class="col-span-2 py-8 text-center text-gray-400 border-2 border-dashed rounded-lg">
+                        😴 当前没有人在自习
+                    </div>
                 </div>
 
-                <!-- Right: AI Report -->
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="font-medium text-gray-700">AI 智能分析报告</h3>
-                        <button x-show="stats && !aiLoading" @click="generateAI(stats)"
-                            class="text-xs text-purple-600 hover:text-purple-800 underline">
-                            ✨ 生成个性化总结
+                <div class="mt-4 pt-4 border-t flex justify-end" x-show="activeSessions.length > 0">
+                    <button @click="skipAllUsers" class="text-red-600 hover:text-red-800 text-sm font-medium hover:underline">
+                        ⚠️ 全部强制结束 (Emergency Stop All)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Actions / AI Tool -->
+            <div class="space-y-6">
+                <!-- Data Check -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-700 mb-4">🔍 数据查询</h2>
+                    <div class="flex gap-2">
+                        <input type="text" placeholder="输入 UID..." id="queryUid" 
+                            class="flex-1 border rounded p-2 text-sm font-mono">
+                        <button @click="fetchUserStats(document.getElementById('queryUid').value)" 
+                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+                            查询
                         </button>
                     </div>
 
-                    <div
-                        class="bg-gray-800 text-green-400 p-4 rounded-lg font-mono text-sm h-48 overflow-y-auto relative">
-                        <!-- Loading State -->
-                        <div x-show="aiLoading"
-                            class="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-80">
-                            <div class="animate-pulse flex flex-col items-center">
-                                <span>AI COMPUTING...</span>
-                            </div>
+                    <!-- AI Summary Result -->
+                    <div x-show="stats" class="mt-4 p-4 bg-gray-50 rounded border border-gray-100 text-sm">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-gray-700" x-text="stats?.user?.username"></span>
+                            <span class="text-xs text-gray-500">Total: <span x-text="formatTime(stats?.totalDuration || 0)"></span></span>
                         </div>
-
-                        <!-- Empty State -->
-                        <div x-show="!aiText && !aiLoading"
-                            class="h-full flex items-center justify-center text-gray-500">
-                            Waiting for data input...
-                        </div>
-
+                        <button @click="generateAI(stats)" :disabled="aiLoading"
+                            class="w-full py-1.5 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition text-xs font-bold flex justify-center items-center gap-2">
+                            <span x-show="!aiLoading">✨ 生成 AI 评价 (Preview)</span>
+                            <span x-show="aiLoading" class="animate-spin">⏳</span>
+                        </button>
+                        
                         <!-- Content -->
-                        <div x-show="aiText" class="whitespace-pre-wrap">
-                            <span class="text-purple-400">>> ANALYZING USER DATA...</span><br>
+                        <div x-show="aiText" class="whitespace-pre-wrap mt-3 text-gray-700 font-mono text-xs leading-relaxed bg-white p-2 rounded border">
+                            <span class="text-purple-400 font-bold">>> ANALYZING USER DATA...</span><br>
                             <span x-text="aiText"></span>
                         </div>
                     </div>
@@ -263,63 +147,161 @@
                 <span>⚙️ 系统配置 (System Config)</span>
             </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Display Durations -->
-                <div class="space-y-4">
-                    <h3 class="font-medium text-gray-800">显示时长 (秒)</h3>
-                    <div>
-                        <label class="block text-sm text-gray-500 mb-1">Widget 显示时长 (秒)</label>
-                        <input type="number" x-model="config.displayDuration.widget"
-                            class="w-full border rounded p-2 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-500 mb-1">主页轮播间隔 (秒)</label>
-                        <input type="number" x-model="config.displayDuration.index"
-                            class="w-full border rounded p-2 text-sm">
-                    </div>
+            <!-- 1. AI Connection (Cherry Studio Style) -->
+            <!-- Using Parent Scope directly, logic moved to configApp() -->
+            <div class="mb-8 border-b pb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-medium text-gray-800 flex items-center gap-2">
+                        <span>🔌 AI 服务商配置</span>
+                        <span class="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded">修改只影响新请求</span>
+                    </h3>
+                    <button @click="testConnection()" :disabled="!config.ai.apiKey || testing"
+                        class="px-3 py-1 text-sm rounded border flex items-center gap-1 transition"
+                        :class="testSuccess === true ? 'bg-green-50 text-green-600 border-green-200' : (testSuccess === false ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-gray-600 hover:bg-gray-50')">
+                        <span x-show="testing" class="animate-spin">🔄</span>
+                        <span x-show="!testing && testSuccess === true">✅</span>
+                        <span x-show="!testing && testSuccess === false">❌</span>
+                        <span x-show="!testing && testSuccess === null">⚡</span>
+                        <span x-text="testing ? '测试中...' : (testSuccess === true ? '测试通过' : '测试连通性')"></span>
+                    </button>   
                 </div>
 
-                <!-- Multi-Session Config -->
-                <div class="space-y-4">
-                    <h3 class="font-medium text-gray-800">多轮专注配置</h3>
-                    <div>
-                        <label class="block text-sm text-gray-500 mb-1">轮次间休息时长 (秒)</label>
-                        <input type="number" x-model="config.multiSession.breakDuration"
-                            class="w-full border rounded p-2 text-sm">
-                        <p class="text-xs text-gray-400 mt-1">用户发送 "打卡 项目 45 3次" 时，每轮之间的休息时间</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Provider Select -->
+                    <div class="col-span-1 md:col-span-2">
+                         <label class="block text-sm text-gray-500 mb-2">服务商 (Switch Provider)</label>
+                         <div class="flex flex-wrap gap-3">
+                            <template x-for="p in providers" :key="p.value">
+                                <button @click="switchProvider(p.value)"
+                                    class="px-4 py-2 rounded-lg border flex items-center gap-2 transition hover:shadow-sm"
+                                    :class="currentProvider === p.value ? 'border-purple-500 bg-purple-50 text-purple-700 ring-1 ring-purple-500' : 'border-gray-200 hover:border-gray-300 bg-white'">
+                                    <span x-text="p.icon" class="text-lg"></span>
+                                    <span class="text-sm font-medium" x-text="p.label"></span>
+                                </button>
+                            </template>
+                         </div>
                     </div>
-                </div>
 
-                <!-- AI Prompts -->
-                <div class="space-y-4">
-                    <h3 class="font-medium text-gray-800">AI 提示词 (Prompts)</h3>
+                    <!-- Base URL -->
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-sm text-gray-500 mb-1">Base URL</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-gray-400">🌐</span>
+                            <input type="text" x-model="config.ai.baseUrl" 
+                                class="w-full border rounded pl-9 p-2 text-sm font-mono bg-gray-50 focus:bg-white transition"
+                                placeholder="https://..." :readonly="currentProvider !== 'custom'">
+                        </div>
+                    </div>
+
+                    <!-- API Key -->
                     <div>
-                        <label class="block text-sm text-gray-500 mb-1">Widget 猫娘评价提示词</label>
-                        <textarea x-model="config.aiPrompts.widget" rows="4"
-                            class="w-full border rounded p-2 text-xs font-mono"></textarea>
-                        <p class="text-xs text-gray-400 mt-1">可用变量: {{username}}, {{duration}}</p>
+                        <label class="block text-sm text-gray-500 mb-1">API Key</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-gray-400">🔑</span>
+                            <div class="w-full border rounded pl-9 p-2 text-sm font-mono bg-white flex items-center">
+                                <input type="password" :value="config.ai.apiKey" @input="updateKey($event.target.value)" placeholder="sk-..."
+                                class="flex-1 outline-none font-mono">
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1" x-text="'Key stored locally for: ' + (providers.find(p=>p.value===currentProvider)?.label || currentProvider)"></p>
+                    </div>
+
+                    <!-- Model Select -->
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-1">Model Name</label>
+                        <div class="relative">
+                             <span class="absolute left-3 top-2.5 text-gray-400">🧠</span>
+                             
+                             <!-- If models fetched, show select, else show input -->
+                             <template x-if="modelsList.length > 0">
+                                <select :value="config.ai.model" @change="updateModel($event.target.value)"
+                                    class="w-full border rounded pl-9 p-2 text-sm font-mono appearance-none bg-white">
+                                    <template x-for="m in modelsList" :key="m">
+                                        <option :value="m" x-text="m" :selected="config.ai.model === m"></option>
+                                    </template>
+                                </select>
+                             </template>
+
+                             <template x-if="modelsList.length === 0">
+                                <input type="text" :value="config.ai.model" @input="updateModel($event.target.value)" placeholder="gpt-3.5-turbo"
+                                    class="w-full border rounded pl-9 p-2 text-sm font-mono">
+                             </template>
+                             
+                             <div class="absolute right-3 top-2.5 text-xs text-gray-400 pointer-events-none">
+                                 <span x-show="modelsList.length > 0">▼</span>
+                             </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1" x-show="modelsList.length === 0">点击右上角"测试连通性"可自动获取模型列表</p>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-6 flex justify-end gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- 2. Durations -->
+                <div class="space-y-4">
+                    <h3 class="font-medium text-gray-800">⏱️ 时长配置</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-500 mb-1">Widget 显示(秒)</label>
+                            <input type="number" x-model="config.displayDuration.widget"
+                                class="w-full border rounded p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-500 mb-1">主页轮播(秒)</label>
+                            <input type="number" x-model="config.displayDuration.index"
+                                class="w-full border rounded p-2 text-sm">
+                        </div>
+                        <div class="col-span-2">
+                             <label class="block text-sm text-gray-500 mb-1">以修代休(休息间隔)</label>
+                             <div class="flex items-center gap-2">
+                                <input type="number" x-model="config.multiSession.breakDuration"
+                                    class="w-full border rounded p-2 text-sm">
+                                <span class="text-sm text-gray-400">秒</span>
+                             </div>
+                             <p class="text-xs text-gray-400 mt-1">例如: 打卡3次, 每次间隔休息多久</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Prompts -->
+                <div class="space-y-4">
+                    <h3 class="font-medium text-gray-800">🧠 AI 角色设定 (Prompts)</h3>
+                    
+                    <!-- Admin Prompt -->
+                    <div>
+                         <label class="block text-sm text-gray-600 font-bold mb-1">🐱 Widget 猫娘评价</label>
+                         <textarea x-model="config.ai.prompts.widget" rows="3"
+                             class="w-full border rounded p-2 text-xs font-mono bg-gray-50 text-gray-700">
+                            </textarea>
+                             
+                        <p class="text-xs text-gray-400 mt-1">控制 AI 如何实现Widget中的评价。变量: {{duration}}{{username}}</p>
+                   </div>
+                    </div>
+
+                    <!-- Normalize Prompt -->
+                    <div>
+                        <label class="block text-sm text-gray-600 font-bold mb-1">🛡️ 项目名审核与规范化 (Normalize)</label>
+                        <textarea x-model="config.ai.prompts.normalize" rows="6"
+                            class="w-full border rounded p-2 text-xs font-mono bg-gray-50 text-gray-700"
+                            placeholder="..."></textarea>
+                        <p class="text-xs text-gray-400 mt-1">控制 AI 如何合并同义词及拦截违禁词。变量: {{existingProjects}}</p>
+                   </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t flex justify-end gap-4">
                 <button @click="resetDefaults"
-                    class="px-6 py-2 bg-gray-500 text-white font-bold rounded hover:bg-gray-600 transition">
-                    恢复默认 (Reset)
+                    class="px-6 py-2 bg-gray-100 text-gray-600 font-bold rounded hover:bg-gray-200 transition">
+                    恢复默认
                 </button>
 
                 <button @click="saveConfig"
-                    class="px-6 py-2 bg-yellow-500 text-white font-bold rounded hover:bg-yellow-600 transition flex items-center gap-2">
-                    <span x-show="!saving">保存配置 (Save)</span>
-                    <span x-show="saving" class="animate-pulse">Saving...</span>
+                    class="px-6 py-2 bg-yellow-500 text-white font-bold rounded hover:bg-yellow-600 transition flex items-center gap-2 shadow-sm">
+                    <span x-show="!saving">💾 保存全部配置</span>
+                    <span x-show="saving" class="animate-pulse">保存中...</span>
                 </button>
             </div>
         </section>
-    </div>
-    </section>
-
-
-
     </div>
 
     <!-- Notification Toast -->
@@ -337,6 +319,26 @@
                 records: [],
                 toast: { show: false, message: '' },
                 pollTimer: null,
+                
+                // --- AI Logic Merged into Main App ---
+                providers: [
+                    { label: 'OpenAI', value: 'openai', url: 'https://api.openai.com/v1', icon: '🤖' },
+                    { label: 'DeepSeek (深度求索)', value: 'deepseek', url: 'https://api.deepseek.com', icon: '🐋' },
+                    { label: 'SiliconFlow (硅基流动)', value: 'siliconflow', url: 'https://api.siliconflow.cn/v1', icon: '🌊' },
+                    { label: 'Moonshot (Kimi)', value: 'moonshot', url: 'https://api.moonshot.cn/v1', icon: '🌙' },
+                    { label: 'Aliyun (通义千问)', value: 'aliyun', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', icon: '☁️' },
+                    { label: 'ZhipuAI (智谱GLM)', value: 'zhipu', url: 'https://open.bigmodel.cn/api/paas/v4', icon: '🧠' },
+                    { label: 'Google Gemini', value: 'gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai', icon: '✨' },
+                    { label: 'Custom (自定义)', value: 'custom', url: '', icon: '🔧' }
+                ],
+                currentProvider: 'custom',
+                providerKeys: {},
+                providerModels: {},
+                providerSelections: {},
+                modelsList: [],
+                testing: false,
+                testSuccess: null,
+                // -------------------------------------
 
                 init() {
                     this.loadState();
@@ -446,7 +448,6 @@
                 // --- New Stats Logic ---
                 async fetchUserStats(uid) {
                     if (!uid) return;
-                    // Reset
                     this.stats = null;
                     this.aiText = "";
 
@@ -454,7 +455,6 @@
                         const res = await fetch(`/api/stats/user/${uid}`);
                         if (res.ok) {
                             this.stats = await res.json();
-                            // Auto generate not triggered to save tokens
                         } else {
                             this.showToast('❌ 未找到该用户数据');
                         }
@@ -474,8 +474,6 @@
                             body: JSON.stringify({ stats, context: 'user' })
                         });
                         const data = await res.json();
-
-                        // Typewriter effect
                         const fullText = data.text;
                         this.aiLoading = false;
 
@@ -498,32 +496,174 @@
             return {
                 config: {
                     displayDuration: { widget: 30000, index: 15000 },
-                    aiPrompts: { widget: '' },
-                    multiSession: { breakDuration: 300 } // seconds for display
+                    ai: { 
+                        apiKey: '', 
+                        baseUrl: '', 
+                        model: '', 
+                        prompts: { widget: '', normalize: '' } 
+                    },
+                    multiSession: { breakDuration: 300 } 
                 },
                 defaults: {
                     displayDuration: { widget: 15, index: 10 },
-                    aiPrompts: { widget: "用户：{{username}}\n时长：{{duration}}分钟\n任务：以自习室猫娘老板身份，用一句话（20字以内）评价该用户.格式:(您已专注x时x分,……)。风格：基于数据,幽默揶揄或温柔夸奖,每句话后面都带喵。" },
-                    multiSession: { breakDuration: 300 } // 5 minutes default
+                    aiPrompts: { widget: "..." }, // Simplified default
+                    multiSession: { breakDuration: 300 } 
                 },
                 saving: false,
+                
+                // Inherit or Share? 
+                // The structure implies configApp is separate X-Data. 
+                // We need to duplicate the AI Logic here or make it mixed in.
+                // REFACTOR: The HTML structure has TWO x-data roots? 
+                // Body: x-data="adminApp()"
+                // Section: x-data="configApp()"
+                // They are nested. Body wraps Section.
+                // Alpine scopes are lexical. configApp children see configApp's data.
+                // BUT configApp children do NOT see adminApp's data unless accessed via $dispatch or global.
+                // WE MUST COPY AI LOGIC INTO CONFIGAPP as that's where the UI is.
+                
+                providers: [
+                    { label: 'OpenAI', value: 'openai', url: 'https://api.openai.com/v1', icon: '🤖' },
+                    { label: 'DeepSeek (深度求索)', value: 'deepseek', url: 'https://api.deepseek.com', icon: '🐋' },
+                    { label: 'SiliconFlow (硅基流动)', value: 'siliconflow', url: 'https://api.siliconflow.cn/v1', icon: '🌊' },
+                    { label: 'Moonshot (Kimi)', value: 'moonshot', url: 'https://api.moonshot.cn/v1', icon: '🌙' },
+                    { label: 'Aliyun (通义千问)', value: 'aliyun', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', icon: '☁️' },
+                    { label: 'ZhipuAI (智谱GLM)', value: 'zhipu', url: 'https://open.bigmodel.cn/api/paas/v4', icon: '🧠' },
+                    { label: 'Google Gemini', value: 'gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai', icon: '✨' },
+                    { label: 'Custom (自定义)', value: 'custom', url: '', icon: '🔧' }
+                ],
+                currentProvider: 'custom',
+                providerKeys: {},
+                providerModels: {},
+                providerSelections: {},
+                modelsList: [],
+                testing: false,
+                testSuccess: null,
 
                 init() {
-                    this.loadConfig();
+                    this.loadConfig().then(() => {
+                        this.initProvider();
+                    });
+                },
+
+                initProvider() {
+                    try {
+                        const savedKeys = localStorage.getItem('study_room_provider_keys');
+                        if (savedKeys) this.providerKeys = JSON.parse(savedKeys);
+                        const savedModels = localStorage.getItem('study_room_provider_models');
+                        if (savedModels) this.providerModels = JSON.parse(savedModels);
+                        const savedSelections = localStorage.getItem('study_room_provider_selections');
+                        if (savedSelections) this.providerSelections = JSON.parse(savedSelections);
+                    } catch(e) {}
+
+                    if (this.config.ai) {
+                        const match = this.providers.find(p => p.url === this.config.ai.baseUrl);
+                        if (match) {
+                            this.currentProvider = match.value;
+                            this.providerKeys[this.currentProvider] = this.config.ai.apiKey;
+                            this.providerSelections[this.currentProvider] = this.config.ai.model;
+                        } else {
+                            this.currentProvider = 'custom';
+                        }
+                    }
+                    this.modelsList = this.providerModels[this.currentProvider] || [];
+                },
+
+                switchProvider(newVal) {
+                    const oldVal = this.currentProvider;
+                    if (this.config.ai.model) this.providerSelections[oldVal] = this.config.ai.model;
+
+                    this.currentProvider = newVal;
+                    const p = this.providers.find(x => x.value === newVal);
+                    
+                    if (p && p.value !== 'custom') {
+                        this.config.ai.baseUrl = p.url;
+                    }
+
+                    this.config.ai.apiKey = this.providerKeys[newVal] || '';
+                    this.modelsList = this.providerModels[newVal] || [];
+                    this.config.ai.model = this.providerSelections[newVal] || '';
+
+                    this.testSuccess = null;
+                    this.saveLocalData();
+                },
+
+                updateKey(val) {
+                    this.config.ai.apiKey = val;
+                    this.providerKeys[this.currentProvider] = val;
+                    this.saveLocalData();
+                },
+                
+                updateModel(val) {
+                    this.config.ai.model = val;
+                    this.providerSelections[this.currentProvider] = val;
+                    this.saveLocalData(); 
+                },
+
+                saveLocalData() {
+                    localStorage.setItem('study_room_provider_keys', JSON.stringify(this.providerKeys));
+                    localStorage.setItem('study_room_provider_models', JSON.stringify(this.providerModels));
+                    localStorage.setItem('study_room_provider_selections', JSON.stringify(this.providerSelections));
+                },
+
+                async testConnection() {
+                    this.testing = true;
+                    this.testSuccess = null;
+                    try {
+                        const res = await fetch('/api/ai/models', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                baseUrl: this.config.ai.baseUrl,
+                                apiKey: this.config.ai.apiKey
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.testSuccess = true;
+                            const freshModels = data.models || [];
+                            if (freshModels.length > 0) {
+                                this.modelsList = freshModels;
+                                this.providerModels[this.currentProvider] = freshModels;
+                                if (!this.config.ai.model) this.updateModel(freshModels[0]);
+                                this.showToast('✅ 连接成功！已获取模型列表');
+                            } else {
+                                this.showToast('⚠️ 连接成功，但需手动输入模型');
+                            }
+                            this.saveLocalData();
+                        } else {
+                            this.testSuccess = false;
+                            alert('连接失败: ' + (data.error || 'Unknown Error'));
+                        }
+                    } catch(e) {
+                        this.testSuccess = false;
+                        alert('请求错误: ' + e.message);
+                    } finally {
+                        this.testing = false;
+                    }
                 },
 
                 async loadConfig() {
                     try {
                         const res = await fetch('/api/config');
                         const data = await res.json();
-                        // Deep mergeish & Convert ms to s for display
+                        
                         if (data.displayDuration) {
                             this.config.displayDuration.widget = data.displayDuration.widget / 1000;
                             this.config.displayDuration.index = data.displayDuration.index / 1000;
                         }
-                        if (data.ai && data.ai.prompts) this.config.aiPrompts = data.ai.prompts;
                         if (data.multiSession) {
-                            this.config.multiSession.breakDuration = data.multiSession.breakDuration / 1000; // ms to s
+                            this.config.multiSession.breakDuration = data.multiSession.breakDuration / 1000;
+                        }
+
+                        if (data.ai) {
+                            this.config.ai.apiKey = data.ai.apiKey || '';
+                            this.config.ai.baseUrl = data.ai.baseUrl || '';
+                            this.config.ai.model = data.ai.model || '';
+                            if (data.ai.prompts) {
+                                this.config.ai.prompts.widget = data.ai.prompts.widget || '';
+                                this.config.ai.prompts.normalize = data.ai.prompts.normalize || '';
+                            }
                         }
                     } catch (e) {
                         console.error("Config Load Error", e);
@@ -533,15 +673,22 @@
                 async saveConfig() {
                     this.saving = true;
                     try {
-                        // Convert s back to ms for saving
                         const payload = {
                             displayDuration: {
                                 widget: this.config.displayDuration.widget * 1000,
                                 index: this.config.displayDuration.index * 1000
                             },
-                            aiPrompts: this.config.aiPrompts,
                             multiSession: {
-                                breakDuration: this.config.multiSession.breakDuration * 1000 // s to ms
+                                breakDuration: this.config.multiSession.breakDuration * 1000
+                            },
+                            ai: {
+                                apiKey: this.config.ai.apiKey,
+                                baseUrl: this.config.ai.baseUrl,
+                                model: this.config.ai.model,
+                                prompts: {
+                                    widget: this.config.ai.prompts.widget,
+                                    normalize: this.config.ai.prompts.normalize
+                                }
                             }
                         };
 
@@ -551,7 +698,7 @@
                             body: JSON.stringify(payload)
                         });
                         const data = await res.json();
-                        alert(data.message);
+                        alert(data.message); 
                     } catch (e) {
                         alert('Save Failed');
                     } finally {
@@ -560,16 +707,17 @@
                 },
 
                 resetDefaults() {
-                    if (!confirm('确定要恢复默认配置吗？(需要点击保存才生效)')) return;
-                    // Deep copy
-                    this.config.displayDuration.widget = this.defaults.displayDuration.widget;
-                    this.config.displayDuration.index = this.defaults.displayDuration.index;
-                    this.config.aiPrompts.widget = this.defaults.aiPrompts.widget;
-                    this.config.multiSession.breakDuration = this.defaults.multiSession.breakDuration;
+                    if (!confirm('确定要恢复默认配置吗？')) return;
+                    this.config.displayDuration.widget = 30;
+                    this.config.displayDuration.index = 15;
+                    this.config.multiSession.breakDuration = 300;
+                },
+                
+                showToast(msg) {
+                     alert(msg); // Simple fallback for now since accessing parent scope is tricky in rewrite
                 }
             }
         }
     </script>
 </body>
-
 </html>

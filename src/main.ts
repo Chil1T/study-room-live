@@ -2,11 +2,15 @@ import { BilibiliClient } from './core/bilibili/client';
 import { LocalWebSocketServer } from './api/websocket/server';
 import { HttpServer } from './api/http/server';
 import { StudyService } from './services/StudyService';
+import { backupDatabase } from './utils/backup';
 
 import { AIService } from './services/AIService';
 
 async function main() {
   console.log('=== Bilibili Study Room Live System ===');
+
+  // 0. Auto Backup (Safety First)
+  await backupDatabase();
 
   // 1. Initialize Infrastructure
   const biliClient = new BilibiliClient();

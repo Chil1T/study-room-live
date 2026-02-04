@@ -6,7 +6,11 @@ node_modules/
 
 # Database (Local data)
 daka.db
-daka.db-journal
+daka.db*
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # Build Output
 dist/

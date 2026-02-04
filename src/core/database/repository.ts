@@ -74,7 +74,7 @@ export class DakaRepository {
    */
   endSession(uid: string): number {
     const ongoing = this.findOngoing(uid);
-    if (!ongoing) return 0;
+    if (!ongoing) return -1;
 
     const now = Date.now();
     const duration = Math.floor((now - ongoing.start_time) / 1000);
@@ -129,6 +129,10 @@ export class DakaRepository {
    * Collapses all history by Username
    */
   searchUserStats(query: string) {
+    return this.getUserDetailedStats(query);
+  }
+
+  getUserDetailedStats(query: string) {
     let targetUser = query;
 
     // 1. Try to see if query is a UID
@@ -137,13 +141,12 @@ export class DakaRepository {
       targetUser = userByUid.user;
     }
 
-    // 2. Aggregate by USERNAME (merges legacy '0' uid and new uid)
+    // 2. Base Aggregate
     const stats = this.db.prepare(`
         SELECT 
             MAX(user) as username,
             COUNT(*) as total_sessions,
             SUM(duration) as total_duration_seconds,
-            MAX(project) as top_project, -- SQLite simple approximation
             COUNT(DISTINCT date) as active_days
         FROM daka_records
         WHERE user = ? AND end_time IS NOT NULL
@@ -152,10 +155,77 @@ export class DakaRepository {
     // If no stats found (total_sessions 0), return null
     if (!stats || !stats.total_sessions) return null;
 
-    return stats;
+    // 3. Today's Duration
+    const today = this.getTodayDateStr();
+    const todayResult = this.db.prepare(`
+        SELECT SUM(duration) as total
+        FROM daka_records
+        WHERE user = ? AND date = ? AND end_time IS NOT NULL
+    `).get(targetUser, today) as { total: number };
+    const todayDuration = todayResult ? (todayResult.total || 0) : 0;
+
+    // 4. Streak Calculation
+    const dates = this.db.prepare(`
+        SELECT DISTINCT date
+        FROM daka_records
+        WHERE user = ? AND end_time IS NOT NULL
+        ORDER BY date DESC
+    `).all(targetUser) as { date: string }[];
+
+    let streak = 0;
+    if (dates.length > 0) {
+      // Logic: Check if latest is today or yesterday. Then iterate back.
+      const d = new Date();
+      const p = (n: number) => n.toString().padStart(2, '0');
+      const fmt = (date: Date) => `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
+
+      const todayStr = fmt(d);
+      d.setDate(d.getDate() - 1);
+      const yesterdayStr = fmt(d);
+
+      const lastDate = dates[0].date;
+
+      if (lastDate === todayStr || lastDate === yesterdayStr) {
+        streak = 1;
+        let prevDate = new Date(lastDate);
+        
+        for (let i = 1; i < dates.length; i++) {
+          prevDate.setDate(prevDate.getDate() - 1); // Go back 1 day
+          const expected = fmt(prevDate);
+          if (dates[i].date === expected) {
+            streak++;
+          } else {
+            break; // Gap found
+          }
+        }
+      }
+    }
+
+    // 5. Top Projects
+    const projects = this.db.prepare(`
+      SELECT project, SUM(duration) as total
+      FROM daka_records
+      WHERE user = ? AND end_time IS NOT NULL
+      GROUP BY project
+      ORDER BY total DESC
+      LIMIT 3
+    `).all(targetUser) as { project: string, total: number }[];
+
+    const grandTotal = stats.total_duration_seconds || 1;
+    const topProjects = projects.map(p => ({
+      name: p.project,
+      percent: Math.round((p.total / grandTotal) * 100)
+    }));
+
+    return {
+      ...stats,
+      today_duration_seconds: todayDuration,
+      streak,
+      top_projects: topProjects
+    };
   }
 
-  // Keep legacy for compatibility if needed, but we will route to search
+  // Keep legacy for compatibility if needed
   getUserStats(uid: string) {
     return this.searchUserStats(uid);
   }
@@ -186,5 +256,20 @@ export class DakaRepository {
       start,
       end
     };
+  }
+
+  /**
+   * Get Top Frequent Projects (for AI Unification context)
+   */
+  getTopProjects(limit: number = 50): string[] {
+      const rows = this.db.prepare(`
+        SELECT project, COUNT(*) as count 
+        FROM daka_records 
+        GROUP BY project 
+        ORDER BY count DESC 
+        LIMIT ?
+      `).all(limit) as { project: string }[];
+      
+      return rows.map(r => r.project);
   }
 }

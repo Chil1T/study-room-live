@@ -20,12 +20,14 @@ interface StudySessionState {
 
 import { AIService } from './AIService';
 import { config } from '../config';
+import { ProjectNormalizationService } from './ProjectNormalizationService';
 
 export class StudyService {
   private biliClient: BilibiliClient;
   private localWs: LocalWebSocketServer;
   private repo: DakaRepository;
-  private aiService: AIService; // Inject AI Service
+  private aiService: AIService;
+  private projectNormalizer: ProjectNormalizationService; // New Service
 
   // Keep track of active sessions in memory to manage 'finished' state and timers
   private sessionStates: Map<string, StudySessionState> = new Map();
@@ -39,6 +41,9 @@ export class StudyService {
     // Initialize DB
     const dbPath = path.join(process.cwd(), 'daka.db');
     this.repo = new DakaRepository(dbPath);
+    
+    // Initialize Normalizer
+    this.projectNormalizer = new ProjectNormalizationService(aiService, this.repo);
 
     // Hydrate memory state from DB
     this.syncFromDb();
@@ -114,6 +119,13 @@ export class StudyService {
 
       // Handle STUDYING state
       const durationSeconds = Math.floor((now - session.startTime) / 1000);
+
+      // If targetDuration is -1, it's an infinite session. 
+      // It never finishes automatically via time check.
+      if (session.targetDuration === -1) {
+        continue;
+      }
+
       const targetSeconds = session.targetDuration * 60;
 
       if (durationSeconds >= targetSeconds) {
@@ -191,37 +203,41 @@ export class StudyService {
 
     if (startMatch) {
       const project = startMatch[1] || '自习';
-      let durationVal = startMatch[2] ? parseFloat(startMatch[2]) : 60; // Default 60 mins
+      // If duration is provided, parse it. If NOT provided, set to -1 (Infinite).
+      let durationVal = startMatch[2] ? parseFloat(startMatch[2]) : -1;
       const unit = startMatch[3];
       const rounds = startMatch[4] ? parseInt(startMatch[4]) : 1; // Default 1 round
 
-      // Convert to minutes
-      if (unit === 'h' || unit === '小时') {
+      // Convert to minutes (only if duration is positive)
+      if (durationVal > 0 && (unit === 'h' || unit === '小时')) {
         durationVal = durationVal * 60;
       }
 
       console.log(`[Session Start] User: ${username}, Project: ${project}, Duration: ${durationVal}m, Rounds: ${rounds}`);
 
-      this.startSession(uid, username, face, project, Math.floor(durationVal), Math.max(1, rounds));
+      this.startSession(uid, username, face, project, durationVal > 0 ? Math.floor(durationVal) : -1, Math.max(1, rounds));
       return;
     }
 
     // 2. Clock Out: "下机"
-    if (content === '下机' || content === '结束' || content === '结束打卡') {
+    if (content === '下机' || content === '结束' || content === '结束打卡' || content === '下课') {
       this.endSession(uid, username);
       return;
     }
 
     // 3. Widget: Stats Query ("专注统计")
     if (content === '专注统计' || content === '查询数据') {
-      const stats = this.repo.searchUserStats(username); // Search by Name first
-      if (stats) {
-        this.localWs.broadcast('WIDGET_STATS', {
-          username: stats.username,
-          duration: Math.floor(stats.total_duration_seconds / 60),
-          sessions: stats.total_sessions,
-          active_days: stats.active_days
-        });
+        const detailed = this.repo.getUserDetailedStats(username);
+        if (detailed) {
+          this.localWs.broadcast('WIDGET_STATS', {
+            username: detailed.username,
+            duration: Math.floor(detailed.total_duration_seconds / 60),
+            sessions: detailed.total_sessions,
+            active_days: detailed.active_days,
+            today_mins: Math.floor(detailed.today_duration_seconds / 60),
+            streak: detailed.streak,
+            top_projects: detailed.top_projects
+          });
         console.log(`[Widget] Stats sent for ${username}`);
       }
       return;
@@ -248,15 +264,20 @@ export class StudyService {
 
   private async generateWidgetAI(stats: any): Promise<string> {
     const durationMins = Math.floor(stats.total_duration_seconds / 60);
-    let template = config.ai.prompts.widget;
-    if (!template) return "AI 未配置";
+    const todayMins = Math.floor(stats.today_duration_seconds / 60);
 
-    const prompt = template
-      .replace('{{username}}', stats.username)
-      .replace('{{duration}}', durationMins.toString());
+    // Build context payload
+    const context = {
+      username: stats.username,
+      total_hours: (durationMins / 60).toFixed(1),
+      today_mins: todayMins,
+      streak: stats.streak || 0,
+      active_days: stats.active_days,
+      top_projects: stats.top_projects || []
+    };
 
     try {
-      const text = await this.aiService.generateSummary(prompt);
+      const text = await this.aiService.generateSummary(JSON.stringify(context));
       return text;
     } catch (e) {
       console.error('Widget AI Error', e);
@@ -264,12 +285,15 @@ export class StudyService {
     }
   }
 
-  private startSession(uid: string, username: string, face: string, project: string, targetDuration: number, totalRounds: number = 1) {
+  private async startSession(uid: string, username: string, face: string, rawProject: string, targetDuration: number, totalRounds: number = 1) {
     // Check if already started
     const ongoing = this.repo.findOngoing(uid);
     if (ongoing) {
       console.log(`[Study] User ${username} already started.`);
     } else {
+      // --- NORMALIZE PROJECT NAME ---
+      const project = await this.projectNormalizer.normalize(rawProject);
+
       this.repo.startSession(username, uid, project, targetDuration);
 
       // Update memory state
@@ -294,8 +318,7 @@ export class StudyService {
 
   private endSession(uid: string, username: string) {
     const duration = this.repo.endSession(uid);
-    if (duration > 0) {
-      console.log(`[Study] User ${username} finished. Duration: ${duration}s`);
+    if (duration >= 0) {
       // Remove from memory
       this.sessionStates.delete(uid);
       this.broadcastState();

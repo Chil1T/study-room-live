@@ -141,6 +141,21 @@ export class HttpServer {
       res.json({ text });
     });
 
+    // Test AI Connection & Get Models
+    this.app.post('/api/ai/models', async (req, res) => {
+        const { baseUrl, apiKey } = req.body;
+        try {
+            const result = await this.aiService.validateConnection(baseUrl, apiKey);
+            if (result.valid) {
+                res.json({ success: true, models: result.models, error: result.error });
+            } else {
+                res.json({ success: false, error: result.error || 'Connection verification failed' });
+            }
+        } catch (e: any) {
+             res.status(500).json({ success: false, error: e.message || 'Server Internal Error' });
+        }
+    });
+
     // 404 Fallback
     this.app.use((req, res) => {
       res.status(404).send('Not Found');

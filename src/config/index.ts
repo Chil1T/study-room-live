@@ -19,7 +19,8 @@ export const config = {
     model: process.env.AI_MODEL || 'gpt-3.5-turbo',
     prompts: {
       admin: process.env.AI_PROMPT_ADMIN || '',
-      widget: process.env.AI_PROMPT_WIDGET || ''
+      widget: process.env.AI_PROMPT_WIDGET || '',
+      normalize: process.env.AI_PROMPT_NORMALIZE || ''
     }
   },
   displayDuration: {
