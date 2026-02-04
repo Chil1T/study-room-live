@@ -32,3 +32,12 @@ pids
 .DS_Store
 # cankao
 参考素材/
+
+# Temporary & Debug
+*_log.txt
+debug_output.txt
+.agent/
+
+# Ad-hoc Scripts
+scripts/inspect_db.js
+scripts/analyze_projects.js
