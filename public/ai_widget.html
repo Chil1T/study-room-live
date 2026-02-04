@@ -106,7 +106,7 @@
                 </div>
 
                 <!-- Content Area: Flex-1 to Center Content Vertically -->
-                <div class="flex-1 relative flex flex-col justify-center overflow-hidden">
+                <div class="flex-1 relative flex flex-col justify-top overflow-hidden">
 
                     <!-- Idle State -->
                     <template x-if="!activeItem">
@@ -136,43 +136,58 @@
                         <div class="w-full animate-slide-in">
                             <!-- TYPE: STATS -->
                             <template x-if="activeItem.type === 'WIDGET_STATS'">
-                                <div class="space-y-2">
-                                    <div class="border-b-4 border-gray-900 pb-1 flex justify-between items-end">
-                                        <!-- Truncate username -->
-                                        <span
-                                            class="text-3xl font-bold font-chakra text-gray-900 leading-none truncate w-3/4"
-                                            x-text="activeItem.data.username"></span>
-                                        <span
-                                            class="text-xs font-black bg-gray-900 text-white px-2 py-1 transform skew-x-[-10deg]">STATS</span>
-                                    </div>
+                                    <div class="space-y-2">
+                                        <!-- Header: Name + Streak -->
+                                        <div class="border-b-4 border-gray-900 pb-1 flex justify-between items-end">
+                                            <div class="flex items-center gap-2 overflow-hidden w-3/4">
+                                                <span class="text-3xl font-bold font-chakra text-gray-900 leading-none truncate"
+                                                    x-text="'@' + activeItem.data.username"></span>
+                                                <!-- Streak Badge -->
+                                                <template x-if="activeItem.data.streak > 1">
+                                                    <div class="flex items-center bg-orange-500 text-white px-2 py-0 rounded-sm transform skew-x-[-10deg]">
+                                                        <span class="text-2xl font-black mr-1">🔥</span>
+                                                        <span class="text-lg font-black leading-none" x-text="activeItem.data.streak"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <span class="text-2xl font-black bg-gray-900 text-white px-2 py-1 transform skew-x-[-10deg]">STATS</span>
+                                        </div>
 
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <!-- Duration -->
-                                        <div class="border-l-8 border-indigo-600 pl-3">
-                                            <div class="text-xs font-black text-gray-500 uppercase tracking-widest">
-                                                Duration</div>
-                                            <!-- Responsive/Adaptive Sizing -->
-                                            <div class="flex items-baseline mt-1 text-indigo-700">
-                                                <span class="text-4xl font-black leading-none tracking-tighter"
-                                                    x-text="formatDurationParts(activeItem.data.duration).value"></span>
-                                                <span class="text-xl font-black text-indigo-400 ml-1"
-                                                    x-text="formatDurationParts(activeItem.data.duration).unit"></span>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <!-- TODAY (Primary Focus) -->
+                                            <div class="border-l-8 border-green-500 pl-3">
+                                                <div class="text-2xl font-black text-gray-500 uppercase tracking-widest">
+                                                    TODAY</div>
+                                                <div class="flex items-baseline mt-1 text-green-700">
+                                                    <span class="text-5xl font-black leading-none tracking-tighter"
+                                                        x-text="formatDurationParts(activeItem.data.today_mins || 0).value"></span>
+                                                    <span class="text-xl font-black text-green-400 ml-1"
+                                                        x-text="formatDurationParts(activeItem.data.today_mins || 0).unit"></span>
+                                                </div>
+                                            </div>
+                                            <!-- LIFETIME -->
+                                            <div class="border-l-8 border-indigo-600 pl-3 opacity-90">
+                                                <div class="text-2xl font-black text-gray-500 uppercase tracking-widest">
+                                                    TOTAL</div>
+                                                <div class="flex items-baseline mt-1 text-indigo-700">
+                                                    <span class="text-5xl font-black leading-none tracking-tighter"
+                                                        x-text="formatDurationParts(activeItem.data.duration).value"></span>
+                                                    <span class="text-xl font-black text-indigo-400 ml-1"
+                                                        x-text="formatDurationParts(activeItem.data.duration).unit"></span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <!-- Sessions -->
-                                        <div class="border-l-8 border-gray-800 pl-3">
-                                            <div class="text-xs font-black text-gray-500 uppercase tracking-widest">
-                                                Sessions</div>
-                                            <div class="text-4xl font-black text-gray-900 leading-none mt-1 tracking-tighter"
-                                                x-text="activeItem.data.sessions"></div>
+                                        
+                                        <!-- Footer Stats -->
+                                        <div class="flex justify-between items-center mt-2 pt-2 border-t-2 border-gray-200">
+                                            <div class="text-2xl font-black text-gray-400">
+                                                SESSIONS: <span class="text-gray-800 text-2xl" x-text="activeItem.data.sessions"></span>
+                                            </div>
+                                            <div class="text-2xl font-black text-gray-400">
+                                                ACTIVE DAYS: <span class="text-gray-800 text-2xl" x-text="activeItem.data.active_days"></span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="text-right mt-4 border-t-2 border-gray-300 pt-2">
-                                        <span class="text-sm font-black text-gray-500">ACTIVE DAYS: <span
-                                                class="text-gray-900 text-2xl"
-                                                x-text="activeItem.data.active_days"></span></span>
-                                    </div>
-                                </div>
                             </template>
 
                             <!-- TYPE: AI REPORT -->
@@ -181,9 +196,9 @@
                                     <div
                                         class="border-b-4 border-indigo-600 pb-1 flex justify-between items-center mb-0">
                                         <span class="text-3xl font-bold font-chakra text-gray-900 truncate w-3/4"
-                                            x-text="activeItem.data.username"></span>
+                                            x-text="'@' + activeItem.data.username"></span>
                                         <span
-                                            class="text-xs font-black text-white bg-indigo-600 px-3 py-1 transform skew-x-[-10deg]">REPORT</span>
+                                            class="text-2xl font-black text-white bg-indigo-600 px-3 py-1 transform skew-x-[-10deg]">REPORT</span>
                                     </div>
                                     <!-- Floating text block -->
                                     <div
