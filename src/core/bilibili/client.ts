@@ -42,7 +42,7 @@ export class BilibiliClient extends EventEmitter {
    */
   async startApp(): Promise<boolean> {
     try {
-      console.log('[BilibiliClient] Starting App...');
+      console.log(`[${new Date().toLocaleString()}] [BilibiliClient] Starting App...`);
 
       // Try to end previous session first to be safe
       await this.endApp().catch(() => { });
@@ -57,7 +57,7 @@ export class BilibiliClient extends EventEmitter {
       if (res.data.code === 0) {
         const { game_info, websocket_info } = res.data.data;
         this.gameId = game_info.game_id;
-        console.log(`[BilibiliClient] App started. GameID: ${this.gameId}`);
+        console.log(`[${new Date().toLocaleString()}] [BilibiliClient] App started. GameID: ${this.gameId}`);
 
         // Start HTTP Heartbeat
         this.startHttpHeartbeat();
@@ -70,18 +70,18 @@ export class BilibiliClient extends EventEmitter {
         return true;
       } else if (res.data.code === 7002) {
         // Room duplicate game error
-        console.warn('[BilibiliClient] Error 7002: Room duplicate game. Retrying in 5s...');
+        console.warn(`[${new Date().toLocaleString()}] [BilibiliClient] Error 7002: Room duplicate game. Retrying in 5s...`);
         // Simple retry strategy for now
         await new Promise(r => setTimeout(r, 5000));
         await this.endApp(); // Try force ending again
         await new Promise(r => setTimeout(r, 5000));
         return this.startApp(); // Recurse once
       } else {
-        console.error('[BilibiliClient] Failed to start app:', res.data.message);
+        console.error(`[${new Date().toLocaleString()}] [BilibiliClient] Failed to start app:`, res.data.message);
         return false;
       }
     } catch (error: any) {
-      console.error('[BilibiliClient] Start App Error:', error.message);
+      console.error(`[${new Date().toLocaleString()}] [BilibiliClient] Start App Error:`, error.message);
       return false;
     }
   }
@@ -101,7 +101,7 @@ export class BilibiliClient extends EventEmitter {
     }
 
     try {
-      console.log('[BilibiliClient] Ending App...');
+      console.log(`[${new Date().toLocaleString()}] [BilibiliClient] Ending App...`);
       await this.api.post('/v2/app/end', params);
     } catch (e: any) {
       // Ignore error
@@ -120,7 +120,7 @@ export class BilibiliClient extends EventEmitter {
         await this.api.post('/v2/app/heartbeat', { game_id: this.gameId });
         // console.debug('[BilibiliClient] HTTP Heartbeat sent');
       } catch (e) {
-        console.error('[BilibiliClient] HTTP Heartbeat failed');
+        console.error(`[${new Date().toLocaleString()}] [BilibiliClient] HTTP Heartbeat failed`);
       }
     }, 20000);
   }
@@ -130,7 +130,7 @@ export class BilibiliClient extends EventEmitter {
       this.ws = new WebSocket(url);
 
       this.ws.on('open', () => {
-        console.log('[BilibiliClient] WebSocket connected');
+        console.log(`[${new Date().toLocaleString()}] [BilibiliClient] WebSocket connected`);
         // Send Auth Packet
         const packet = BiliProtocol.encode(authBody, WsOp.USER_AUTHENTICATION);
         this.ws?.send(packet);
@@ -153,7 +153,7 @@ export class BilibiliClient extends EventEmitter {
       });
 
       this.ws.on('error', (err) => {
-        console.error('[BilibiliClient] WebSocket Error:', err.message);
+        console.error(`[${new Date().toLocaleString()}] [BilibiliClient] WebSocket Error:`, err.message);
         if (!this.isDestroyed) {
           // Trigger close to handle reconnect
           this.ws?.close();
@@ -161,9 +161,9 @@ export class BilibiliClient extends EventEmitter {
       });
 
       this.ws.on('close', () => {
-        console.log('[BilibiliClient] WebSocket closed');
+        console.log(`[${new Date().toLocaleString()}] 🔌 [BilibiliClient] WebSocket connection closed`);
         if (!this.isDestroyed) {
-          console.warn('[BilibiliClient] Unexpected disconnect. Reconnecting in 5s...');
+          console.warn(`[${new Date().toLocaleString()}] ⚠️ [BilibiliClient] Unexpected disconnect. Reconnecting in 5s...`);
           setTimeout(() => {
             this.reconnect();
           }, 5000);
@@ -174,17 +174,19 @@ export class BilibiliClient extends EventEmitter {
 
   private async reconnect() {
     this.cleanup(); // Clean up partial state (timers, old ws)
-    console.log('[BilibiliClient] Reconnecting...');
+    console.log(`[${new Date().toLocaleString()}] 🔄 [BilibiliClient] Reconnecting...`);
 
     try {
       // Must restart App to get fresh WSS link (old one might be invalid after IP change)
       const success = await this.startApp();
       if (!success) {
-        console.error('[BilibiliClient] Reconnect failed, retrying again in 10s...');
+        console.error(`[${new Date().toLocaleString()}] ❌ [BilibiliClient] Reconnect failed, retrying again in 10s...`);
         setTimeout(() => this.reconnect(), 10000);
+      } else {
+        console.log(`[${new Date().toLocaleString()}] ✅ [BilibiliClient] Reconnected Successfully!`);
       }
     } catch (e) {
-      console.error('[BilibiliClient] Reconnect Exception:', e);
+      console.error(`[${new Date().toLocaleString()}] ❌ [BilibiliClient] Reconnect Exception:`, e);
       setTimeout(() => this.reconnect(), 10000);
     }
   }
@@ -194,7 +196,7 @@ export class BilibiliClient extends EventEmitter {
 
     switch (header.op) {
       case WsOp.CONNECT_SUCCESS:
-        console.log('[BilibiliClient] Auth Success');
+        console.log(`[${new Date().toLocaleString()}] [BilibiliClient] Auth Success`);
         break;
       case WsOp.HEARTBEAT_REPLY:
         // console.debug('[BilibiliClient] WS Heartbeat Reply, Popularity:', body);
