@@ -122,13 +122,12 @@
                     <!-- AI Summary Result -->
                     <div x-show="stats" class="mt-4 p-4 bg-gray-50 rounded border border-gray-100 text-sm">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-gray-700" x-text="stats?.user?.username"></span>
-                            <span class="text-xs text-gray-500">Total: <span x-text="formatTime(stats?.totalDuration || 0)"></span></span>
+                            <span class="font-bold text-gray-700" x-text="stats?.username"></span>
+                            <span class="text-xs text-gray-500">Total: <span x-text="formatTime(stats?.total_duration_seconds || 0)"></span></span>
                         </div>
                         <button @click="generateAI(stats)" :disabled="aiLoading"
                             class="w-full py-1.5 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition text-xs font-bold flex justify-center items-center gap-2">
-                            <span x-show="!aiLoading">✨ 生成 AI 评价 (Preview)</span>
-                            <span x-show="aiLoading" class="animate-spin">⏳</span>
+                            <span x-text="aiLoading ? '⏳' : '✨ 生成 AI 评价 (Preview)'"></span>
                         </button>
                         
                         <!-- Content -->
@@ -276,7 +275,7 @@
                              
                         <p class="text-xs text-gray-400 mt-1">控制 AI 如何实现Widget中的评价。变量: {{duration}}{{username}}</p>
                    </div>
-                    </div>
+
 
                     <!-- Normalize Prompt -->
                     <div>
@@ -295,10 +294,9 @@
                     恢复默认
                 </button>
 
-                <button @click="saveConfig"
-                    class="px-6 py-2 bg-yellow-500 text-white font-bold rounded hover:bg-yellow-600 transition flex items-center gap-2 shadow-sm">
-                    <span x-show="!saving">💾 保存全部配置</span>
-                    <span x-show="saving" class="animate-pulse">保存中...</span>
+                <button @click="saveConfig" :disabled="saving || !config"
+                    class="px-6 py-2 bg-yellow-500 text-white font-bold rounded hover:bg-yellow-600 transition flex items-center gap-2 shadow-sm disabled:opacity-50">
+                    <span x-text="saving ? '💾 保存中...' : '💾 保存全部配置'"></span>
                 </button>
             </div>
         </section>
@@ -319,6 +317,11 @@
                 records: [],
                 toast: { show: false, message: '' },
                 pollTimer: null,
+                
+                // --- Stats Query Variables ---
+                stats: null,
+                aiLoading: false,
+                aiText: '',
                 
                 // --- AI Logic Merged into Main App ---
                 providers: [
