@@ -221,7 +221,7 @@
         }
 
         .chalk-data-text {
-            font-size: 32px;
+            font-size: 60px;
             font-weight: normal;
         }
 
@@ -896,7 +896,7 @@
                     // Normal or Resting
                     fillBar.classList.remove('infinite-mode');
 
-                    const targetSec = isResting ? breakDuration : data.targetDuration * 60;
+                    const targetSec = isResting ? breakDuration : data.targetDuration;
 
                     // Progress Calculation
                     let percent = 0;
