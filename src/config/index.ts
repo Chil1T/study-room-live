@@ -3,11 +3,11 @@ dotenv.config();
 
 export const config = {
   bilibili: {
-    appId: process.env.BILI_APP_ID || '1750671843202',
-    appKey: process.env.BILI_APP_KEY || 'Z5dW4QBogRf1mZRqI9TBunTs',
-    appSecret: process.env.BILI_APP_SECRET || 'BnGppoeMxuKfhs9XMkbE2WKDij3mYm',
-    accessToken: process.env.BILI_ACCESS_TOKEN || 'EAFHYO8ZEWOW5', // Code/Identity code
-    roomId: process.env.BILI_ROOM_ID ? parseInt(process.env.BILI_ROOM_ID) : 26714219,
+    appId: process.env.BILI_APP_ID || '',
+    appKey: process.env.BILI_APP_KEY || '',
+    appSecret: process.env.BILI_APP_SECRET || '',
+    accessToken: process.env.BILI_ACCESS_TOKEN || '',
+    roomId: process.env.BILI_ROOM_ID ? parseInt(process.env.BILI_ROOM_ID) : 0,
   },
   server: {
     port: process.env.PORT ? parseInt(process.env.PORT) : 3000,

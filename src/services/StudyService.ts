@@ -317,9 +317,27 @@ export class StudyService {
   }
 
   private endSession(uid: string, username: string) {
+    // 1. Get session info BEFORE removing from memory
+    const session = this.sessionStates.get(uid);
+    
+    // 2. Update DB
     const duration = this.repo.endSession(uid);
-    if (duration >= 0) {
-      // Remove from memory
+
+    if (duration >= 0 && session) {
+      // 3. Broadcast Event IF it was manually ended (i.e. not already 'finished')
+      // Automatic completion sets status='finished' before calling this, so this won't double-fire.
+      if (session.status !== 'finished') {
+        this.localWs.broadcast('SESSION_COMPLETE', {
+            uid,
+            username: session.username,
+            project: session.project,
+            duration: duration,
+            totalRounds: session.totalRounds
+        });
+        console.log(`[Study] Manually ended session for ${username} (Duration: ${duration}s)`);
+      }
+
+      // 4. Remove from memory & update list
       this.sessionStates.delete(uid);
       this.broadcastState();
     }

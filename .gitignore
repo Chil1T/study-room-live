@@ -36,8 +36,12 @@ pids
 # Temporary & Debug
 *_log.txt
 debug_output.txt
+verify_*.txt
 .agent/
 
-# Ad-hoc Scripts
-scripts/inspect_db.js
-scripts/analyze_projects.js
+# Ad-hoc Scripts & Tests (local debug tools)
+scripts/
+tests/
+
+# Database Backups (auto-generated)
+backups/

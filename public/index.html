@@ -795,33 +795,13 @@
             }
         }
 
-        // --- 初始化 ---
-        connect();
-
-        // 启动本地 Heartbeat，每秒刷新 UI 进度
-        heartbeatTimer = setInterval(() => {
-            // 只有当有用户时才刷新
-            if (userList.length > 0 && !isLocked) {
-                renderCurrentUser(false); // animate=false prevents re-triggering entrance animations
-            }
-        }, 1000);
-
-        // 启动轮播定时器
-        startCarousel();
-
-        function startCarousel() {
-            if (carouselTimer) clearInterval(carouselTimer);
-            carouselTimer = setInterval(() => {
-                if (userList.length > 1 && !isLocked) {
-                    nextUser();
-                }
-            }, carouselInterval);
-        }
-
+        // --- nextUser 函数移动到外部，供多处调用 ---
         function nextUser() {
-            currentIndex++;
-            if (currentIndex >= userList.length) currentIndex = 0;
-            renderCurrentUser(true); // animate=true triggers transition
+            if (isLocked) return; // 锁定中不轮播
+            if (userList.length <= 1) return;
+
+            currentIndex = (currentIndex + 1) % userList.length;
+            renderCurrentUser(true);
         }
 
         // --- Hint Carousel Logic ---
@@ -1048,23 +1028,8 @@
             }, 1500);
         }
 
-        // --- 轮播控制 ---
-        function nextUser() {
-            if (isLocked) return; // 锁定中不轮播
-            if (userList.length <= 1) return;
 
-            currentIndex = (currentIndex + 1) % userList.length;
-            renderCurrentUser(true);
-        }
-
-        // --- 定时器 ---
-        // 实时计时 (每秒微调UI)
-        setInterval(() => {
-            if (userList.length === 0 || isLocked) return;
-            renderCurrentUser(false); // 仅刷新数字
-        }, 1000);
-
-        // 轮播控制 (Dynamic Interval)
+        // --- 轮播控制 (Dynamic Interval) ---
         async function startCarousel() {
             try {
                 const res = await fetch('/api/config');
@@ -1081,8 +1046,18 @@
 
             console.log(`[Index] Carousel Interval: ${carouselInterval}ms, Break: ${breakDuration}s`);
 
-            setInterval(() => {
-                if (userList.length > 1) {
+            // 启动本地 Heartbeat，每秒刷新 UI 进度
+            if (heartbeatTimer) clearInterval(heartbeatTimer);
+            heartbeatTimer = setInterval(() => {
+                if (userList.length > 0 && !isLocked) {
+                    renderCurrentUser(false); // animate=false prevents re-triggering entrance animations
+                }
+            }, 1000);
+
+            // 启动轮播定时器
+            if (carouselTimer) clearInterval(carouselTimer);
+            carouselTimer = setInterval(() => {
+                if (userList.length > 1 && !isLocked) {
                     nextUser();
                 }
             }, carouselInterval);
