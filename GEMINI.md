@@ -51,7 +51,8 @@
 ### 3. 数据与配置 (Data & Configuration)
 
 - **配置 API**: `/api/config` (GET/POST)
-  - 管理 `.env` 中 `DISPLAY_DURATION_WIDGET`, `DISPLAY_DURATION_INDEX`, `AI_PROMPT_WIDGET` 的持久化。
+  - 管理 `.env` 中 `DISPLAY_DURATION_WIDGET`, `DISPLAY_DURATION_INDEX`, `AI_PROMPT_WIDGET`, `AI_TIMEOUT_NORMALIZE`, `AI_TIMEOUT_VALIDATE` 等的持久化。
+  - 支持运行时热更新，修改后无需重启服务即可生效。
 - **同步**: 后端在新 WebSocket 连接时广播状态，确保 `index.html` 正确初始化 (睡觉猫咪 vs 活跃状态)。
 
 ## 关键数据流 (Key Data Flows)
@@ -67,6 +68,8 @@
 - `AI_PROMPT_ADMIN`: 管理后台总结用的提示词。
 - `AI_PROMPT_WIDGET`: 简洁、“毒舌”或“夸奖”风格的 Widget 报告提示词。
 - `BREAK_DURATION`: 多轮专注模式下，轮次间的休息时长 (毫秒，默认 300000 = 5 分钟)。
+- `AI_TIMEOUT_NORMALIZE`: AI 项目名审核超时 (毫秒，默认 8000)。每次打卡时触发。
+- `AI_TIMEOUT_VALIDATE`: AI 连通性测试超时 (毫秒，默认 5000)。管理后台测试按钮触发。
 
 ## 当前状态 (2026-02-13)
 
