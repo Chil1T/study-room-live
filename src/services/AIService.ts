@@ -110,7 +110,7 @@ export class AIService {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${this.apiKey}`
                     },
-                    timeout: 5000 // 5s Strict Timeout (Client Side)
+                    timeout: 8000 // 8s Strict Timeout (Client Side)
                 }
             );
 
