@@ -116,6 +116,9 @@
   - [x] **轮播修复**: 重构 `public/index.html` 中的 Heartbeat 和轮播定时器初始化逻辑，消除重复 `nextUser` 定义，修复多卡显示时的切换异常。
   - [x] **手动结束广播**: `StudyService.endSession()` 现在在手动结束时也会广播 `SESSION_COMPLETE` 事件，确保统计数据一致性。
   - [x] **AI 超时调整**: `AIService` 客户端超时从 3s 提升至 5s，减少因网络波动导致的请求失败。
+- [x] **AI 超时热配置 (2026-03-04)**
+  - [x] **动态调整**: `normalizeProjectName` 和 `validateConnection` 的超时时间可在管理后台实时修改，无需重启服务。
+  - [x] **配置持久化**: 超时值持久化至 `.env` (`AI_TIMEOUT_NORMALIZE`, `AI_TIMEOUT_VALIDATE`)。
 
 - **同步与 Git**: 在涉及数据同步或版本控制 (Git, 备份) 的领域，始终将用户视为 **初学者**。提供详细的、分步骤的警告，并仔细解释潜在的冲突 (例如：本地 vs 远程)，以防止数据丢失。
 

@@ -110,7 +110,7 @@ export class AIService {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${this.apiKey}`
                     },
-                    timeout: 8000 // 8s Strict Timeout (Client Side)
+                    timeout: config.ai.timeout.normalize // Configurable via admin panel
                 }
             );
 
@@ -144,7 +144,7 @@ export class AIService {
 
             const response = await axios.get(url, {
                 headers: { 'Authorization': `Bearer ${apiKey}` },
-                timeout: 5000
+                timeout: config.ai.timeout.validate
             });
 
             if (response.data && Array.isArray(response.data.data)) {
@@ -170,7 +170,7 @@ export class AIService {
                 max_tokens: 1
             }, {
                 headers: { 'Authorization': `Bearer ${apiKey}` },
-                timeout: 5000
+                timeout: config.ai.timeout.validate
             });
             
             // If we got here (even with a 400 "Model not found"), the *Connection* and *Auth* are likely good.

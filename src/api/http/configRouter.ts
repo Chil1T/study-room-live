@@ -13,7 +13,8 @@ configRouter.get('/', (req, res) => {
             apiKey: config.ai.apiKey,
             baseUrl: config.ai.baseUrl,
             model: config.ai.model,
-            prompts: config.ai.prompts
+            prompts: config.ai.prompts,
+            timeout: config.ai.timeout
         },
         multiSession: config.multiSession
     });
@@ -38,6 +39,11 @@ configRouter.post('/', async (req, res) => {
             if (ai.prompts.widget !== undefined) config.ai.prompts.widget = ai.prompts.widget;
             if (ai.prompts.normalize !== undefined) config.ai.prompts.normalize = ai.prompts.normalize;
             if (ai.prompts.admin !== undefined) config.ai.prompts.admin = ai.prompts.admin;
+        }
+
+        if (ai.timeout) {
+            if (ai.timeout.normalize !== undefined) config.ai.timeout.normalize = parseInt(ai.timeout.normalize);
+            if (ai.timeout.validate !== undefined) config.ai.timeout.validate = parseInt(ai.timeout.validate);
         }
     }
 
@@ -88,6 +94,11 @@ configRouter.post('/', async (req, res) => {
                 if (ai.prompts.widget !== undefined) updateKey('AI_PROMPT_WIDGET', ai.prompts.widget);
                 if (ai.prompts.normalize !== undefined) updateKey('AI_PROMPT_NORMALIZE', ai.prompts.normalize);
                 if (ai.prompts.admin !== undefined) updateKey('AI_PROMPT_ADMIN', ai.prompts.admin);
+             }
+
+             if (ai.timeout) {
+                if (ai.timeout.normalize !== undefined) updateKey('AI_TIMEOUT_NORMALIZE', ai.timeout.normalize);
+                if (ai.timeout.validate !== undefined) updateKey('AI_TIMEOUT_VALIDATE', ai.timeout.validate);
              }
         }
 

@@ -21,6 +21,10 @@ export const config = {
       admin: process.env.AI_PROMPT_ADMIN || '',
       widget: process.env.AI_PROMPT_WIDGET || '',
       normalize: process.env.AI_PROMPT_NORMALIZE || ''
+    },
+    timeout: {
+      normalize: process.env.AI_TIMEOUT_NORMALIZE ? parseInt(process.env.AI_TIMEOUT_NORMALIZE) : 8000,
+      validate: process.env.AI_TIMEOUT_VALIDATE ? parseInt(process.env.AI_TIMEOUT_VALIDATE) : 5000,
     }
   },
   displayDuration: {

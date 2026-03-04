@@ -259,6 +259,24 @@
                              </div>
                              <p class="text-xs text-gray-400 mt-1">例如: 打卡3次, 每次间隔休息多久</p>
                         </div>
+                        <div>
+                             <label class="block text-sm text-gray-500 mb-1">🛡️ AI审核超时</label>
+                             <div class="flex items-center gap-2">
+                                <input type="number" x-model="config.ai.timeout.normalize"
+                                    class="w-full border rounded p-2 text-sm" min="1" max="30">
+                                <span class="text-sm text-gray-400">秒</span>
+                             </div>
+                             <p class="text-xs text-gray-400 mt-1">每次打卡时的项目名审核超时</p>
+                        </div>
+                        <div>
+                             <label class="block text-sm text-gray-500 mb-1">⚡ 连通性测试超时</label>
+                             <div class="flex items-center gap-2">
+                                <input type="number" x-model="config.ai.timeout.validate"
+                                    class="w-full border rounded p-2 text-sm" min="1" max="30">
+                                <span class="text-sm text-gray-400">秒</span>
+                             </div>
+                             <p class="text-xs text-gray-400 mt-1">管理后台测试AI连通性的超时</p>
+                        </div>
                     </div>
                 </div>
 
@@ -503,7 +521,8 @@
                         apiKey: '', 
                         baseUrl: '', 
                         model: '', 
-                        prompts: { widget: '', normalize: '' } 
+                        prompts: { widget: '', normalize: '' },
+                        timeout: { normalize: 8, validate: 5 }
                     },
                     multiSession: { breakDuration: 300 } 
                 },
@@ -667,6 +686,10 @@
                                 this.config.ai.prompts.widget = data.ai.prompts.widget || '';
                                 this.config.ai.prompts.normalize = data.ai.prompts.normalize || '';
                             }
+                            if (data.ai.timeout) {
+                                this.config.ai.timeout.normalize = (data.ai.timeout.normalize || 8000) / 1000;
+                                this.config.ai.timeout.validate = (data.ai.timeout.validate || 5000) / 1000;
+                            }
                         }
                     } catch (e) {
                         console.error("Config Load Error", e);
@@ -691,6 +714,10 @@
                                 prompts: {
                                     widget: this.config.ai.prompts.widget,
                                     normalize: this.config.ai.prompts.normalize
+                                },
+                                timeout: {
+                                    normalize: this.config.ai.timeout.normalize * 1000,
+                                    validate: this.config.ai.timeout.validate * 1000
                                 }
                             }
                         };
@@ -714,6 +741,8 @@
                     this.config.displayDuration.widget = 30;
                     this.config.displayDuration.index = 15;
                     this.config.multiSession.breakDuration = 300;
+                    this.config.ai.timeout.normalize = 8;
+                    this.config.ai.timeout.validate = 5;
                 },
                 
                 showToast(msg) {
