@@ -16,6 +16,14 @@ export class AIService {
         }
     }
 
+    getModel(): string {
+        return config.ai.model;
+    }
+
+    getNormalizeTimeout(): number {
+        return config.ai.timeout.normalize;
+    }
+
     async generateSummary(prompt: string): Promise<string> {
         if (!this.apiKey) {
             return "AI 配置未完成，请在 .env 中设置 AI_API_KEY";

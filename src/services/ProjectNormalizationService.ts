@@ -40,6 +40,7 @@ export class ProjectNormalizationService {
         console.time(`[Normalization] AI ${input}`);
         const normalized = await this.aiService.normalizeProjectName(input, topProjects);
         console.timeEnd(`[Normalization] AI ${input}`);
+        console.log(`[Normalization] 📡 Model: ${this.aiService.getModel()} | Timeout: ${this.aiService.getNormalizeTimeout()}ms`);
 
         // 5. Update Cache
         this.updateCache(input, normalized);
